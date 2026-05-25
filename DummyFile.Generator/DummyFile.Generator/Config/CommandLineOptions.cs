@@ -6,6 +6,8 @@ public sealed class CommandLineOptions
 
     public int? FileSizeLines { get; set; }
 
+    public long? FileSizeBytes { get; set; }
+
     public bool Force { get; set; }
 
     public bool ShowHelp { get; set; }

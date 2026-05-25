@@ -18,4 +18,8 @@
         <Using Include="Xunit"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\DummyFile.Generator.Services\DummyFile.Generator.Services.csproj" />
+    </ItemGroup>
+
 </Project>
