@@ -77,3 +77,15 @@ Solutions will be assessed on:
 1. Windows OS
 2. Available memory: 8 or 16 GB
 3. Has free hard drive space for temporary files and a separately sorted file
+
+## Dummy File Generator Design Decisions
+
+- The console application is intentionally kept as simple as possible. Because of that, it does not use the standard .NET application infrastructure such as Host Builder, Dependency Injection containers, or configuration binding from multiple sources.
+- File system access is isolated behind dedicated adapter abstractions `IFileAdapter`. This keeps file creation and stream opening concerns separated from the higher-level export workflow and makes that logic easier to test in isolation.
+- Data generation is separated from file export. This allows the generation pipeline and the disk writing pipeline to be verified independently and makes future changes safer and more localized.
+- `IRowFormatter` was introduced intentionally as a separate abstraction so the output row format can evolve without coupling that change to the generator or exporter. For example, the separator could be changed from `". "` to `","` in the future with minimal impact on the rest of the application.
+
+## Dummy File Generator TODO
+
+- Add a progress bar.
+- Add multithreaded generation.
