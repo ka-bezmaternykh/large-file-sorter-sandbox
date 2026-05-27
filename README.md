@@ -61,22 +61,22 @@ Solutions will be assessed on:
 2. One line of the file is one line to be sorted. Multi-line values are not allowed.
 3. Duplicate lines are possible in the file.
 4. Lines are not infinite and have a reasonable size from 3 to 1024 characters.
-5. The range of allowed characters is standard ASCII.
+5. The range of allowed characters is standard ~~ASCII~~ UTF8.
 6. The numeric part of the line: only positive numbers. The maximum expected range is Int64.
 
 ### About the Test File Generator:
 1. Is it acceptable to specify the number of lines as an input value instead of the file size?
 
 ### About the Sorter:
-1. Is it acceptable to output the sorted content as a separate file? Unknown
-2. Is it acceptable to create temporary files?
-3. If there are duplicates in the source file, is it acceptable to ignore them? Unknown
+1. Is it acceptable to output the sorted content as a separate file? Yes
+2. Is it acceptable to create temporary files? Yes
+3. If there are duplicates in the source file, is it acceptable to ignore them? Duplicate rows are allowed and must be taken into account by the algorithm. 
 4. Sorting the string portion alphabetically ascending.
 
 ### Host machine:
-1. Windows OS
-2. Available memory: 8 or 16 GB
-3. Has free hard drive space for temporary files and a separately sorted file
+1. Windows OS - Preferably, no OS tie-in is required. Windows OS is acceptable, provided it is properly optimized for it.
+2. Available memory: 16 GB
+3. Has free hard drive space for temporary files and a separately sorted file. There will be enough space, but the algorithm shouldn't rely on it. Proper error handling is expected.
 
 ## Dummy File Generator Design Decisions
 
