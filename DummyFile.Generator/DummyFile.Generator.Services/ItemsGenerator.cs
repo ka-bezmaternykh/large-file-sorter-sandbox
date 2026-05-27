@@ -13,7 +13,7 @@ public sealed class ItemsGenerator : IItemsGenerator
 
     public void Generate(out Item item)
     {
-        var number = _random.Next(1, int.MaxValue);
+        var number = (long)_random.NextInt64(1, long.MaxValue);
         var text = CreateRandomText();
 
         item = new Item(number, text);

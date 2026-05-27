@@ -19,7 +19,7 @@ public class ItemsGeneratorTests
         Assert.All(items, item =>
         {
             Assert.True(item.Number > 0);
-            Assert.InRange(item.Number, 1, int.MaxValue);
+            Assert.InRange(item.Number, 1L, long.MaxValue);
             Assert.False(item.Text.IsEmpty);
             Assert.True(item.Text.Length <= 1024);
             Assert.DoesNotContain((byte)'\n', item.TextSpan.ToArray());
