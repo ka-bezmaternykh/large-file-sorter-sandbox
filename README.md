@@ -78,12 +78,29 @@ Solutions will be assessed on:
 2. Available memory: 16 GB
 3. Has free hard drive space for temporary files and a separately sorted file. There will be enough space, but the algorithm shouldn't rely on it. Proper error handling is expected.
 
-## Dummy File Generator Design Decisions
+## Dummy File Generator
+
+### Design Decisions
 
 - The File Generator console application is intentionally kept as simple as possible. Because of that, it does not use the standard .NET application infrastructure such as Host Builder, Dependency Injection containers, or configuration binding from multiple sources.
 - File system access is isolated behind dedicated adapter abstractions `IFileAdapter`. This keeps file creation and stream opening concerns separated from the higher-level export workflow `IFileExporter` and makes that logic easier to test in isolation.
 - Data generation is separated from file export. This allows the generation pipeline and the disk writing pipeline to be verified independently and makes future changes safer and more localized.
 - `IRowFormatter` was introduced intentionally as a separate abstraction so the output row format can evolve without coupling that change to the generator or exporter. For example, the separator could be changed from `". "` to `","` in the future with minimal impact on the rest of the application.
+
+### Developed Features
+
+- Generates output rows in the `<Number>. <String>` format.
+- Supports generation limits by requested line count via `--file-size-lines`.
+- Supports generation limits by requested file size via `--file-size` with `mb` and `gb` suffixes.
+- Supports overwriting an existing output file via the `--force` flag.
+- Validates command-line arguments and prints help information for invalid or incomplete input.
+- Validates that enough free disk space is available before generation starts by checking the requested file size plus a 5% safety margin.
+- Uses a dedicated file adapter layer to isolate file system operations from export logic.
+- Uses a buffered file exporter that writes rows asynchronously in batches to reduce write overhead.
+- Separates item generation, row formatting, and file export into isolated components to keep the implementation testable and easier to evolve.
+- Supports graceful cancellation with `Ctrl+C`.
+- Includes unit and integration-style tests for parsing, validation, generation, formatting, file handling, and export behavior.
+- Includes a small performance measurement script for running the published generator and collecting execution time, output file size, and memory usage.
 
 ### Dummy File Generator TODO
 
