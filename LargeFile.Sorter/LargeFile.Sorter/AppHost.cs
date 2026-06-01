@@ -30,6 +30,13 @@ public static class AppHost
             OutputFilePath = options.OutputFile!,
             Force = options.Force
         });
+        builder.Services.AddSingleton(new ChunkConfig
+        {
+            // 128 MB
+            ChunkSize = 128 * 1024 * 1024,
+            TempFilesFolder = "./temp",
+            TempFileTemplate = "chunk-{0:D4}.tmp"
+        });
         builder.Services.AddLargeFileSorterServices();
 
         return builder.Build();

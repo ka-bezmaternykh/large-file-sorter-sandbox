@@ -1,32 +1,47 @@
 using LargeFile.Sorter.Services.Abstractions;
-using LargeFile.Sorter.Services.Options;
 using Microsoft.Extensions.Logging;
 
 namespace LargeFile.Sorter.Services;
 
 public sealed class SorterApplication : ISorterApplication
 {
-    private readonly ILogger _logger;
-    private readonly SorterRunOptions _options;
+    private readonly IEnvironmentMonitor _environmentMonitor;
+    private readonly IChunkSorterFactory _chunkSorterFactory;
+    private readonly IInputFileReader _inputFileReader;
+    private readonly ILogger<SorterApplication> _logger;
 
-    public SorterApplication(ILoggerFactory loggerFactory, SorterRunOptions options)
+    public SorterApplication(
+        IEnvironmentMonitor environmentMonitor,
+        IChunkSorterFactory chunkSorterFactory,
+        IInputFileReader inputFileReader,
+        ILogger<SorterApplication> logger)
     {
-        ArgumentNullException.ThrowIfNull(loggerFactory);
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(environmentMonitor);
+        ArgumentNullException.ThrowIfNull(chunkSorterFactory);
+        ArgumentNullException.ThrowIfNull(inputFileReader);
+        ArgumentNullException.ThrowIfNull(logger);
 
-        _logger = loggerFactory.CreateLogger<SorterApplication>();
-        _options = options;
+        _environmentMonitor = environmentMonitor;
+        _chunkSorterFactory = chunkSorterFactory;
+        _inputFileReader = inputFileReader;
+        _logger = logger;
     }
 
-    public Task RunAsync(CancellationToken cancellationToken = default)
+    public async Task RunAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        await using var inputFileReader = _inputFileReader;
 
-        _logger.LogInformation(
-            "LargeFile.Sorter infrastructure initialized for source {FilePath}, output {OutputFilePath}, force {Force}.",
-            _options.FilePath,
-            _options.OutputFilePath,
-            _options.Force);
-        return Task.CompletedTask;
+        _environmentMonitor.WriteEnvironment();
+        _logger.LogInformation("Starting chunk pipeline from input file.");
+
+        while (await inputFileReader.HasNextAsync(cancellationToken))
+        {
+            var chunkSorter = await _chunkSorterFactory.CreateAsync(cancellationToken);
+            await inputFileReader.ReadNextAsync(chunkSorter.Writer, chunkSorter.ChunkSize, cancellationToken);
+        }
+
+        await _chunkSorterFactory.WaitAllAsync(cancellationToken);
+        _logger.LogInformation("Chunk pipeline completed.");
     }
 }
