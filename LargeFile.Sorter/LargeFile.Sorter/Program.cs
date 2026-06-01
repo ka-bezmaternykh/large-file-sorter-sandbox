@@ -1,6 +1,7 @@
 using LargeFile.Sorter.Config;
 using LargeFile.Sorter.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace LargeFile.Sorter;
 
@@ -22,7 +23,19 @@ public static class Program
 
         using var host = AppHost.Build(args, options);
         var application = host.Services.GetRequiredService<ISorterApplication>();
-        await application.RunAsync();
+
+        try
+        {
+            await application.RunAsync();
+        }
+        finally
+        {
+            Console.WriteLine("Small set of memory metrics in the end");
+            var process = Process.GetCurrentProcess();
+
+            Console.WriteLine($"Peak working set: {process.PeakWorkingSet64 / 1024 / 1024} MB");
+            Console.WriteLine($"Current working set: {process.WorkingSet64 / 1024 / 1024} MB");
+        }
     }
 
     private static void PrintValidationErrorsAndHelp(IEnumerable<string> validationErrors)
