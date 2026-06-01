@@ -59,3 +59,4 @@ nunit-*.xml
 Files/*
 */.idea/*
 */publish/*
+*.sln.dotsettings.user
