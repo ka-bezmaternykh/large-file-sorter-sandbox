@@ -60,3 +60,4 @@ LargeFiles/*
 */.idea/*
 */Release/*
 *.sln.dotsettings.user
+temp/*
