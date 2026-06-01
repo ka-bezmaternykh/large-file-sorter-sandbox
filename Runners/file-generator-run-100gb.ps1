@@ -1,4 +1,4 @@
-$projectPath = Join-Path $PSScriptRoot "..\DummyFile.Generator\DummyFile.Generator.csproj"
+$projectPath = Join-Path $PSScriptRoot "..\DummyFile.Generator\DummyFile.Generator\DummyFile.Generator.csproj"
 $outputFilePath = Join-Path $PSScriptRoot "..\LargeFiles\unsorted-100gb.txt"
 
 dotnet run --project $projectPath -- --file $outputFilePath --file-size 100gb --force
