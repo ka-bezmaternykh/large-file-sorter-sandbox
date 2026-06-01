@@ -56,7 +56,7 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-Files/*
+LargeFiles/*
 */.idea/*
-*/publish/*
+*/Release/*
 *.sln.dotsettings.user

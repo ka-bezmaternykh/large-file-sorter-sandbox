@@ -1,8 +1,8 @@
-$publishedExePath = Join-Path $PSScriptRoot "..\publish\DummyFile.Generator.exe"
+$publishedExePath = Join-Path $PSScriptRoot "..\Release\DummyFile.Generator.exe"
 $outputFilePath = Join-Path $PSScriptRoot "dummy-file-1gb.txt"
 
 if (-not (Test-Path $publishedExePath)) {
-    throw "Published executable was not found at '$publishedExePath'. Run .\dotnet-publish.ps1 first."
+    throw "Published executable was not found at '$publishedExePath'. Run .\file-generator-release.ps1 first."
 }
 
 $arguments = @(
@@ -48,7 +48,7 @@ if ($process.ExitCode -ne 0) {
 
     throw @"
 DummyFile.Generator exited with code $($process.ExitCode).
-Republish the application first by running .\dotnet-publish.ps1 if the published executable is outdated.
+Republish the application first by running .\file-generator-release.ps1 if the published executable is outdated.
 
 Standard output:
 $standardOutput
