@@ -102,6 +102,40 @@ Solutions will be assessed on:
 - Includes unit and integration-style tests for parsing, validation, generation, formatting, file handling, and export behavior.
 - Includes a small performance measurement script for running the published generator and collecting execution time, output file size, and memory usage.
 
+## Runners
+
+Launch scripts live in the root `Runners/` folder.
+
+### Publish
+
+- `file-generator-release.ps1` publishes `DummyFile.Generator` into `DummyFile.Generator/Release`
+- `file-sorter-release.ps1` publishes `LargeFile.Sorter` into `LargeFile.Sorter/Release`
+
+### Dummy File Generator
+
+- `file-generator-run-100-lines.ps1` writes `LargeFiles/unsorted-100-lines.txt`
+- `file-generator-run-100mb.ps1` writes `LargeFiles/unsorted-100mb.txt`
+- `file-generator-run-1gb.ps1` writes `LargeFiles/unsorted-1gb.txt`
+- `file-generator-run-10gb.ps1` writes `LargeFiles/unsorted-10gb.txt`
+- `file-generator-run-100gb.ps1` writes `LargeFiles/unsorted-100gb.txt`
+
+### Sorter
+
+- `file-sorter-run-100-lines.ps1` reads `LargeFiles/unsorted-100-lines.txt` and writes `LargeFiles/sorted-100-lines.txt`
+- `file-sorter-run-100mb.ps1` reads `LargeFiles/unsorted-100mb.txt` and writes `LargeFiles/sorted-100mb.txt`
+- `file-sorter-run-1gb.ps1` reads `LargeFiles/unsorted-1gb.txt` and writes `LargeFiles/sorted-1gb.txt`
+- `file-sorter-run-10gb.ps1` reads `LargeFiles/unsorted-10gb.txt` and writes `LargeFiles/sorted-10gb.txt`
+- `file-sorter-run-100gb.ps1` reads `LargeFiles/unsorted-100gb.txt` and writes `LargeFiles/sorted-100gb.txt`
+
+### Example Scenario: 10 GB
+
+1. Run `file-generator-release.ps1` to publish the generator into `DummyFile.Generator/Release`.
+2. Run `file-generator-run-10gb.ps1` to create `LargeFiles/unsorted-10gb.txt`.
+3. Run `file-sorter-release.ps1` to publish the sorter into `LargeFile.Sorter/Release`.
+4. Run `file-sorter-run-10gb.ps1` to sort `LargeFiles/unsorted-10gb.txt` into `LargeFiles/sorted-10gb.txt`.
+
+This gives you one complete large-file flow from generation to sorting with matching input and output names.
+
 ### Dummy File Generator TODO
 
 - Add a progress bar.
