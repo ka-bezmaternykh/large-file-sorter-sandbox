@@ -10,20 +10,58 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public async Task AddLargeFileSorterServices_RegistersSorterApplication()
     {
+        var tempDirectoryPath = CreateTempDirectory();
+        var tempInputFilePath = Path.Combine(tempDirectoryPath, "input.txt");
+        await File.WriteAllTextAsync(tempInputFilePath, "1. Apple\n");
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(new SorterRunOptions
         {
-            FilePath = "input.txt",
-            OutputFilePath = "sorted.txt",
+            FilePath = tempInputFilePath,
+            OutputFilePath = Path.Combine(tempDirectoryPath, "output.txt"),
             Force = true
+        });
+        services.AddSingleton(new ChunkConfig
+        {
+            ChunkSize = 1030,
+            TempFilesFolder = tempDirectoryPath,
+            TempFileTemplate = "chunk-{0:D4}.tmp"
         });
         services.AddLargeFileSorterServices();
 
         await using var serviceProvider = services.BuildServiceProvider();
 
         var application = serviceProvider.GetRequiredService<ISorterApplication>();
+        var adapter = serviceProvider.GetRequiredService<IInputFileAdapter>();
+        var environmentMonitor = serviceProvider.GetRequiredService<IEnvironmentMonitor>();
+        var chunkSorterFactory = serviceProvider.GetRequiredService<IChunkSorterFactory>();
+        var itemFormatter = serviceProvider.GetRequiredService<IItemFormatter>();
+
+        Assert.Equal(tempInputFilePath, adapter.FilePath);
+        Assert.True(environmentMonitor.LevelOfParallelism > 0);
+        Assert.Empty(chunkSorterFactory.ChunkFileAdapters);
+        Assert.IsType<TextRowFormatter>(itemFormatter);
 
         await application.RunAsync();
+
+        Assert.Single(chunkSorterFactory.ChunkFileAdapters);
+        Assert.Equal("1. Apple\n", await File.ReadAllTextAsync(chunkSorterFactory.ChunkFileAdapters[1].FilePath));
+
+        DeleteDirectory(tempDirectoryPath);
+    }
+
+    private static string CreateTempDirectory()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static void DeleteDirectory(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
+        }
     }
 }
