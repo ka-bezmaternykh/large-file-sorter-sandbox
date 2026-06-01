@@ -1,1 +1,3 @@
-dotnet publish .\DummyFile.Generator\DummyFile.Generator.csproj -c Release -o .\publish
+$releaseScriptPath = Join-Path $PSScriptRoot "..\Runners\file-generator-release.ps1"
+
+& $releaseScriptPath
