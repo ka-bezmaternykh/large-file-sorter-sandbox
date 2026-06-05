@@ -39,6 +39,12 @@ public static class AppHost
             TempFilesFolder = options.TempFilesDir ?? DefaultTempFilesFolder,
             TempFileTemplate = "chunk-{0:D4}.tmp"
         });
+        builder.Services.AddSingleton(new MergeConfig
+        {
+            MaxChunkFilesPerMerge = 64,
+            TempFilesFolder = options.TempFilesDir ?? DefaultTempFilesFolder,
+            MergeFileTemplate = "merge-{0:D4}.tmp"
+        });
         builder.Services.AddLargeFileSorterServices();
 
         return builder.Build();
