@@ -49,6 +49,33 @@ public class InputFileAdapterTests
         Assert.Null(stream);
     }
 
+    [Fact]
+    public async Task DisposeAsync_ShouldDisposeOwnedReadStream()
+    {
+        var tempFilePath = CreateTempFile("415. Apple\n");
+
+        try
+        {
+            IInputFileAdapter adapter = new InputFileAdapter(new InputFileConfig
+            {
+                FilePath = tempFilePath
+            }, NullLogger<InputFileAdapter>.Instance);
+
+            var success = adapter.TryOpenReadStream(out var stream);
+
+            Assert.True(success);
+            Assert.NotNull(stream);
+
+            await adapter.DisposeAsync();
+
+            Assert.Throws<ObjectDisposedException>(() => _ = stream!.Length);
+        }
+        finally
+        {
+            File.Delete(tempFilePath);
+        }
+    }
+
     private static string CreateTempFile(string content)
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.txt");
