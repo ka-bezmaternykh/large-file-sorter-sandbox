@@ -11,7 +11,6 @@ public sealed class InputFileReader : IInputFileReader
 
     private readonly IInputFileAdapter _inputFileAdapter;
     private readonly ILogger<InputFileReader> _logger;
-    private FileStream? _stream;
     private PipeReader? _pipeReader;
     private bool _disposed;
     private bool _isFullyRead;
@@ -149,10 +148,7 @@ public sealed class InputFileReader : IInputFileReader
             await _pipeReader.CompleteAsync();
         }
 
-        if (_stream is not null)
-        {
-            await _stream.DisposeAsync();
-        }
+        await _inputFileAdapter.DisposeAsync();
 
         _disposed = true;
     }
@@ -165,14 +161,14 @@ public sealed class InputFileReader : IInputFileReader
             return true;
         }
 
-        if (!_inputFileAdapter.TryOpenReadStream(out _stream) || _stream is null)
+        if (!_inputFileAdapter.TryOpenReadStream(out var stream) || stream is null)
         {
             pipeReader = null!;
             return false;
         }
 
         _pipeReader = PipeReader.Create(
-            _stream,
+            stream,
             new StreamPipeReaderOptions(
                 bufferSize: 64 * 1024,
                 leaveOpen: false));
