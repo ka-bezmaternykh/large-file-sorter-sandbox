@@ -79,6 +79,12 @@ public class SorterApplicationTests
             TempFilesFolder = tempDirectoryPath,
             TempFileTemplate = "chunk-{0:D4}.tmp"
         });
+        services.AddSingleton(new MergeConfig
+        {
+            MaxChunkFilesPerMerge = 64,
+            TempFilesFolder = tempDirectoryPath,
+            MergeFileTemplate = "merge-{0:D4}.tmp"
+        });
         services.AddLargeFileSorterServices();
 
         return services.BuildServiceProvider();
