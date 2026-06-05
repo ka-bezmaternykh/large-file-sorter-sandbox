@@ -93,6 +93,28 @@ public class ChunkFileAdapterTests
         }
     }
 
+    [Fact]
+    public async Task DisposeAsync_ShouldDeleteChunkFile()
+    {
+        var tempDirectoryPath = CreateTempDirectory();
+        var tempFilePath = Path.Combine(tempDirectoryPath, "chunk.txt");
+        File.WriteAllText(tempFilePath, "content");
+
+        try
+        {
+            var adapter = CreateAdapter(tempFilePath);
+            await adapter.CompleteWriteAsync();
+
+            await adapter.DisposeAsync();
+
+            Assert.False(File.Exists(tempFilePath));
+        }
+        finally
+        {
+            DeleteDirectory(tempDirectoryPath);
+        }
+    }
+
     private static IChunkFileAdapter CreateAdapter(string filePath)
     {
         return new ChunkFileAdapter(
