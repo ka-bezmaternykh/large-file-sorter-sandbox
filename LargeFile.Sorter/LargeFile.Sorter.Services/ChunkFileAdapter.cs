@@ -122,6 +122,13 @@ public sealed class ChunkFileAdapter : IChunkFileAdapter
 
         await CompleteReadAsync();
         await CompleteWriteAsync();
+
+        if (File.Exists(FilePath))
+        {
+            _logger.LogInformation("Deleting chunk file during adapter disposal: {FilePath}", FilePath);
+            File.Delete(FilePath);
+        }
+
         _disposed = true;
     }
 }
