@@ -14,6 +14,7 @@ public class AppHostTests
         {
             File = "input.txt",
             OutputFile = "sorted.txt",
+            TempFilesDir = "temp-root",
             Force = true
         };
 
@@ -28,7 +29,7 @@ public class AppHostTests
         Assert.Equal("sorted.txt", runOptions.OutputFilePath);
         Assert.True(runOptions.Force);
         Assert.Equal(128 * 1024 * 1024, chunkConfig.ChunkSize);
-        Assert.Equal("./temp", chunkConfig.TempFilesFolder);
+        Assert.Equal("temp-root", chunkConfig.TempFilesFolder);
         Assert.Equal("chunk-{0:D4}.tmp", chunkConfig.TempFileTemplate);
     }
 }

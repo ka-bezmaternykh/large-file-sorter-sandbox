@@ -21,6 +21,19 @@ public class CommandLineOptionsParserTests
     }
 
     [Fact]
+    public void TryParse_ShouldReadTempFilesDir()
+    {
+        var success = CommandLineOptionsParser.TryParse(
+            ["--file", "input.txt", "--output-file", "sorted.txt", "--temp-files-dir", "temp"],
+            out var options,
+            out var validationErrors);
+
+        Assert.True(success);
+        Assert.Empty(validationErrors);
+        Assert.Equal("temp", options.TempFilesDir);
+    }
+
+    [Fact]
     public void TryParse_ShouldEnableHelpMode()
     {
         var success = CommandLineOptionsParser.TryParse(["--help"], out var options, out var validationErrors);
@@ -63,6 +76,18 @@ public class CommandLineOptionsParserTests
                 "The --output-file option is required."
             ],
             validationErrors);
+    }
+
+    [Fact]
+    public void TryParse_ShouldFailWhenTempFilesDirValueIsMissing()
+    {
+        var success = CommandLineOptionsParser.TryParse(
+            ["--file", "input.txt", "--output-file", "sorted.txt", "--temp-files-dir"],
+            out _,
+            out var validationErrors);
+
+        Assert.False(success);
+        Assert.Equal(["Missing value for --temp-files-dir"], validationErrors);
     }
 
     [Fact]

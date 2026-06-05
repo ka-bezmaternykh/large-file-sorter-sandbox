@@ -6,6 +6,8 @@ public sealed class CommandLineOptions
 
     public string? OutputFile { get; set; }
 
+    public string? TempFilesDir { get; set; }
+
     public bool Force { get; set; }
 
     public bool ShowHelp { get; set; }

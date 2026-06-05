@@ -9,6 +9,8 @@ namespace LargeFile.Sorter;
 
 public static class AppHost
 {
+    private const string DefaultTempFilesFolder = "./temp";
+
     public static IHost Build(string[] args, CommandLineOptions options)
     {
         ArgumentNullException.ThrowIfNull(args);
@@ -34,7 +36,7 @@ public static class AppHost
         {
             // 128 MB
             ChunkSize = 128 * 1024 * 1024,
-            TempFilesFolder = "./temp",
+            TempFilesFolder = options.TempFilesDir ?? DefaultTempFilesFolder,
             TempFileTemplate = "chunk-{0:D4}.tmp"
         });
         builder.Services.AddLargeFileSorterServices();

@@ -44,6 +44,16 @@ public static class CommandLineOptionsParser
                     options.OutputFile = outputFileValue;
                     break;
 
+                case "--temp-files-dir":
+                    if (!TryReadValue(args, ref index, out var tempFilesDirValue))
+                    {
+                        errors.Add("Missing value for --temp-files-dir");
+                        continue;
+                    }
+
+                    options.TempFilesDir = tempFilesDirValue;
+                    break;
+
                 default:
                     errors.Add($"Unknown argument: {argument}");
                     break;
@@ -73,6 +83,7 @@ public static class CommandLineOptionsParser
                Options:
                  --file <path>         Path to the source file to sort.
                  --output-file <path>  Path to the output file for sorted data.
+                 --temp-files-dir <path>  Path to the temp folder for chunk and merge files.
                  --force               Allow overwriting an existing output file.
                  --help                Show this help message.
                """;
