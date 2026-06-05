@@ -75,10 +75,7 @@ public sealed class ChunkFileWriter : IChunkFileWriter
         }
 
         await FlushAsync(CancellationToken.None);
-        if (_stream is not null)
-        {
-            await _stream.DisposeAsync();
-        }
+        await _chunkFileAdapter.CompleteWriteAsync();
         _disposed = true;
     }
 

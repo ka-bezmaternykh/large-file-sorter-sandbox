@@ -29,6 +29,48 @@ public class ChunkFileAdapterTests
     }
 
     [Fact]
+    public async Task OpenReadStream_ShouldOpenConfiguredFile()
+    {
+        var tempDirectoryPath = CreateTempDirectory();
+        var tempFilePath = Path.Combine(tempDirectoryPath, "chunk.txt");
+        File.WriteAllText(tempFilePath, "content");
+
+        try
+        {
+            IChunkFileAdapter adapter = CreateAdapter(tempFilePath);
+            await adapter.CompleteWriteAsync();
+
+            using var stream = adapter.OpenReadStream();
+
+            Assert.Equal(tempFilePath, adapter.FilePath);
+            Assert.True(stream.CanRead);
+        }
+        finally
+        {
+            DeleteDirectory(tempDirectoryPath);
+        }
+    }
+
+    [Fact]
+    public void OpenReadStream_ShouldThrowWhenWriteIsNotCompleted()
+    {
+        var tempDirectoryPath = CreateTempDirectory();
+        var tempFilePath = Path.Combine(tempDirectoryPath, "chunk.txt");
+        File.WriteAllText(tempFilePath, "content");
+
+        try
+        {
+            IChunkFileAdapter adapter = CreateAdapter(tempFilePath);
+
+            Assert.Throws<InvalidOperationException>(() => adapter.OpenReadStream());
+        }
+        finally
+        {
+            DeleteDirectory(tempDirectoryPath);
+        }
+    }
+
+    [Fact]
     public void OpenWriteStream_ShouldReplaceExistingFile()
     {
         var tempDirectoryPath = CreateTempDirectory();
