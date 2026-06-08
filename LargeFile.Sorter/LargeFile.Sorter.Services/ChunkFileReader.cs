@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LargeFile.Sorter.Services;
 
-public sealed class ChunkFileReader : IChunkFileReader
+public sealed class ChunkFileReader : ITempFileReader
 {
     private readonly ITempFileAdapter _chunkFileAdapter;
     private readonly IRowParser _rowParser;
