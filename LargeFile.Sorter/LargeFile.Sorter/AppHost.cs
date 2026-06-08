@@ -24,7 +24,6 @@ public static class AppHost
             options.SingleLine = true;
             options.TimestampFormat = "HH:mm:ss ";
         });
-        builder.Logging.SetMinimumLevel(LogLevel.Information);
 
         builder.Services.AddSingleton(new SorterRunOptions
         {
