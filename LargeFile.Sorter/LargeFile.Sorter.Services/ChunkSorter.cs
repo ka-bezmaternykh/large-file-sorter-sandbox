@@ -9,7 +9,7 @@ namespace LargeFile.Sorter.Services;
 
 public sealed class ChunkSorter : IChunkSorter
 {
-    private readonly IChunkFileWriter _chunkFileWriter;
+    private readonly ITempFileWriter _chunkFileWriter;
     private readonly IRowParser _rowParser;
     private readonly IComparer<Item> _itemComparer;
     private readonly IItemFormatter _itemFormatter;
@@ -19,7 +19,7 @@ public sealed class ChunkSorter : IChunkSorter
     private bool _disposed;
 
     public ChunkSorter(
-        IChunkFileWriter chunkFileWriter,
+        ITempFileWriter chunkFileWriter,
         IRowParser rowParser,
         IComparer<Item> itemComparer,
         IItemFormatter itemFormatter,

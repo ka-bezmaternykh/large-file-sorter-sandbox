@@ -1,17 +1,17 @@
 namespace LargeFile.Sorter.Services.Abstractions;
 
 /// <summary>
-/// Buffers and persists chunk bytes to the chunk file stream.
+/// Buffers and persists bytes to a temporary file stream.
 /// </summary>
-public interface IChunkFileWriter : IAsyncDisposable
+public interface ITempFileWriter : IAsyncDisposable
 {
     /// <summary>
-    /// Writes the provided bytes into the buffered chunk output pipeline.
+    /// Writes the provided bytes into the buffered temporary file output pipeline.
     /// </summary>
     ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Forces any buffered bytes to be written to the underlying chunk file.
+    /// Forces any buffered bytes to be written to the underlying temporary file.
     /// </summary>
     ValueTask FlushAsync(CancellationToken cancellationToken = default);
 }

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LargeFile.Sorter.Services;
 
-public sealed class MergeFileWriter : IMergeFileWriter
+public sealed class MergeFileWriter : ITempFileWriter
 {
     private const int BufferSizeBytes = 64 * 1024;
 
