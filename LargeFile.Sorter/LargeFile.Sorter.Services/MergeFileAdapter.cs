@@ -111,6 +111,13 @@ public sealed class MergeFileAdapter : ITempFileAdapter
 
         await CompleteReadAsync();
         await CompleteWriteAsync();
+
+        if (File.Exists(FilePath))
+        {
+            _logger.LogInformation("Deleting merge file during adapter disposal: {FilePath}", FilePath);
+            File.Delete(FilePath);
+        }
+
         _disposed = true;
     }
 }

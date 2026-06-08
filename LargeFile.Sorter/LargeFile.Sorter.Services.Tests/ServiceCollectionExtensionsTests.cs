@@ -51,7 +51,8 @@ public class ServiceCollectionExtensionsTests
         await application.RunAsync();
 
         Assert.Single(chunkSorterFactory.ChunkFileAdapters);
-        Assert.Equal("1. Apple\n", await File.ReadAllTextAsync(chunkSorterFactory.ChunkFileAdapters[1].FilePath));
+        Assert.Equal("1. Apple\n", await File.ReadAllTextAsync(Path.Combine(tempDirectoryPath, "output.txt")));
+        Assert.False(File.Exists(chunkSorterFactory.ChunkFileAdapters[1].FilePath));
 
         DeleteDirectory(tempDirectoryPath);
     }

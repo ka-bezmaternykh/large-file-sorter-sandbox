@@ -63,7 +63,7 @@ public sealed class MergeFileWriter : ITempFileWriter
         }
 
         await EnsureStream().WriteAsync(_buffer.AsMemory(0, _bufferedBytes), cancellationToken);
-        _logger.LogDebug("Flushed {BufferedBytes} buffered bytes to merge file.", _bufferedBytes);
+        _logger.LogTrace("Flushed {BufferedBytes} buffered bytes to merge file.", _bufferedBytes);
         _bufferedBytes = 0;
     }
 
