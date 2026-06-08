@@ -8,22 +8,26 @@ public sealed class SorterApplication : ISorterApplication
 {
     private readonly IEnvironmentMonitor _environmentMonitor;
     private readonly IChunkSorterFactory _chunkSorterFactory;
+    private readonly IMergeSorter _mergeSorter;
     private readonly IInputFileReader _inputFileReader;
     private readonly ILogger<SorterApplication> _logger;
 
     public SorterApplication(
         IEnvironmentMonitor environmentMonitor,
         IChunkSorterFactory chunkSorterFactory,
+        IMergeSorter mergeSorter,
         IInputFileReader inputFileReader,
         ILogger<SorterApplication> logger)
     {
         ArgumentNullException.ThrowIfNull(environmentMonitor);
         ArgumentNullException.ThrowIfNull(chunkSorterFactory);
+        ArgumentNullException.ThrowIfNull(mergeSorter);
         ArgumentNullException.ThrowIfNull(inputFileReader);
         ArgumentNullException.ThrowIfNull(logger);
 
         _environmentMonitor = environmentMonitor;
         _chunkSorterFactory = chunkSorterFactory;
+        _mergeSorter = mergeSorter;
         _inputFileReader = inputFileReader;
         _logger = logger;
     }
@@ -46,6 +50,10 @@ public sealed class SorterApplication : ISorterApplication
 
             await _chunkSorterFactory.WaitAllAsync(cancellationToken);
             _logger.LogInformation("Chunk pipeline completed.");
+
+            _logger.LogInformation("Starting merging pipeline.");
+            await _mergeSorter.MergeAsync(_chunkSorterFactory.ChunkFileAdapters, cancellationToken);
+            _logger.LogInformation("Merging pipeline completed.");
         }
         catch (Exception exception)
         {

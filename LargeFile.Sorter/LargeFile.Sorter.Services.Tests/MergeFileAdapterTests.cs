@@ -42,6 +42,7 @@ public class MergeFileAdapterTests
             await adapter.DisposeAsync();
 
             Assert.Throws<ObjectDisposedException>(() => _ = stream.Length);
+            Assert.False(File.Exists(tempFilePath));
         }
         finally
         {

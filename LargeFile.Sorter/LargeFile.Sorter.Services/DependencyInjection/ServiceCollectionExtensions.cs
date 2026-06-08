@@ -24,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IRowParser, RowParser>();
         services.AddTransient<IComparer<Models.Item>, ItemComparer>();
         services.AddTransient<IItemFormatter, TextRowFormatter>();
+        services.AddSingleton<IMergeSorter, MergeSorter>();
         // TODO Binary file optimization
         //services.AddSingleton<BinaryRowFormatter>();
         services.AddTransient<IInputFileReader, InputFileReader>();
