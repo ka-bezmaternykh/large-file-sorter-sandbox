@@ -7,14 +7,14 @@ public sealed class MergeFileWriter : IMergeFileWriter
 {
     private const int BufferSizeBytes = 64 * 1024;
 
-    private readonly IMergeFileAdapter _mergeFileAdapter;
+    private readonly ITempFileAdapter _mergeFileAdapter;
     private readonly byte[] _buffer = new byte[BufferSizeBytes];
     private readonly ILogger<MergeFileWriter> _logger;
     private FileStream? _stream;
     private int _bufferedBytes;
     private bool _disposed;
 
-    public MergeFileWriter(IMergeFileAdapter mergeFileAdapter, ILogger<MergeFileWriter> logger)
+    public MergeFileWriter(ITempFileAdapter mergeFileAdapter, ILogger<MergeFileWriter> logger)
     {
         ArgumentNullException.ThrowIfNull(mergeFileAdapter);
         ArgumentNullException.ThrowIfNull(logger);

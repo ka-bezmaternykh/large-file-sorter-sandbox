@@ -8,7 +8,7 @@ public interface IChunkSorterFactory
     /// <summary>
     /// Gets the registry of chunk file adapters keyed by chunk number.
     /// </summary>
-    IReadOnlyDictionary<int, IChunkFileAdapter> ChunkFileAdapters { get; }
+    IReadOnlyDictionary<int, ITempFileAdapter> ChunkFileAdapters { get; }
 
     /// <summary>
     /// Creates the next chunk sorter when execution limits allow it.

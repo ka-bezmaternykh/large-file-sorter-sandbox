@@ -12,7 +12,7 @@ public sealed class ChunkSorterFactory : IChunkSorterFactory
     private readonly IChunkExecutionLimiter _chunkExecutionLimiter;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ChunkSorterFactory> _logger;
-    private readonly Dictionary<int, IChunkFileAdapter> _chunkFileAdapters = [];
+    private readonly Dictionary<int, ITempFileAdapter> _chunkFileAdapters = [];
     private readonly List<Task> _activeSorters = [];
     private readonly Lock _syncRoot = new();
     private int _nextChunkNumber;
@@ -34,7 +34,7 @@ public sealed class ChunkSorterFactory : IChunkSorterFactory
         _logger = logger;
     }
 
-    public IReadOnlyDictionary<int, IChunkFileAdapter> ChunkFileAdapters => _chunkFileAdapters;
+    public IReadOnlyDictionary<int, ITempFileAdapter> ChunkFileAdapters => _chunkFileAdapters;
 
     public async Task<IChunkSorter> CreateAsync(CancellationToken cancellationToken = default)
     {
