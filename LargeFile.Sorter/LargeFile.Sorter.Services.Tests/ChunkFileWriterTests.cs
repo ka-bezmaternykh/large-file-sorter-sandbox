@@ -48,7 +48,7 @@ public class ChunkFileWriterTests
         }
     }
 
-    private static IChunkFileWriter CreateWriter(string filePath)
+    private static ITempFileWriter CreateWriter(string filePath)
     {
         var adapter = new ChunkFileAdapter(
             new ChunkFileConfig
