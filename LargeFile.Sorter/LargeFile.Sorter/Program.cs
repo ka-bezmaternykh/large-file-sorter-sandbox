@@ -8,22 +8,35 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
-        if (!CommandLineOptionsParser.TryParse(args, out var options, out var validationErrors))
+        try
         {
-            PrintValidationErrorsAndHelp(validationErrors);
-            return;
-        }
+            if (!CommandLineOptionsParser.TryParse(args, out var options, out var validationErrors))
+            {
+                PrintValidationErrorsAndHelp(validationErrors);
+                return;
+            }
 
-        if (options.ShowHelp)
+            if (options.ShowHelp)
+            {
+                Console.WriteLine(CommandLineOptionsParser.GetHelpText());
+                return;
+            }
+
+            using var host = AppHost.Build(args, options);
+            var application = host.Services.GetRequiredService<ISorterApplication>();
+
+            await application.RunAsync();
+        }
+        catch (Exception exception)
         {
-            Console.WriteLine(CommandLineOptionsParser.GetHelpText());
-            return;
+            Console.Error.WriteLine(exception);
+            Environment.ExitCode = 1;
         }
-
-        using var host = AppHost.Build(args, options);
-        var application = host.Services.GetRequiredService<ISorterApplication>();
-
-        await application.RunAsync();
+        finally
+        {
+            Console.WriteLine("Press any key to continue . . .");
+            Console.ReadKey(intercept: true);
+        }
     }
 
     private static void PrintValidationErrorsAndHelp(IEnumerable<string> validationErrors)
