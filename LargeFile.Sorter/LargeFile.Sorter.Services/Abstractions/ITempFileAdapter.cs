@@ -1,22 +1,22 @@
 namespace LargeFile.Sorter.Services.Abstractions;
 
 /// <summary>
-/// Owns the target path of a single chunk file and creates read/write streams for it.
+/// Owns the target path of a temporary file and manages its read/write stream lifecycle.
 /// </summary>
-public interface IChunkFileAdapter : IAsyncDisposable
+public interface ITempFileAdapter : IAsyncDisposable
 {
     /// <summary>
-    /// Gets the full path of the chunk file managed by this adapter.
+    /// Gets the full path of the temporary file managed by this adapter.
     /// </summary>
     string FilePath { get; }
 
     /// <summary>
-    /// Opens a readable stream for the chunk file.
+    /// Opens a readable stream for the temporary file.
     /// </summary>
     FileStream OpenReadStream();
 
     /// <summary>
-    /// Opens a writable stream for the chunk file.
+    /// Opens a writable stream for the temporary file.
     /// </summary>
     FileStream OpenWriteStream();
 

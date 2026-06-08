@@ -14,7 +14,7 @@ public class MergeFileAdapterTests
 
         try
         {
-            IMergeFileAdapter adapter = CreateAdapter(tempFilePath);
+            ITempFileAdapter adapter = CreateAdapter(tempFilePath);
 
             using var stream = adapter.OpenWriteStream();
 
@@ -36,7 +36,7 @@ public class MergeFileAdapterTests
 
         try
         {
-            IMergeFileAdapter adapter = CreateAdapter(tempFilePath);
+            ITempFileAdapter adapter = CreateAdapter(tempFilePath);
             var stream = adapter.OpenWriteStream();
 
             await adapter.DisposeAsync();
@@ -49,7 +49,7 @@ public class MergeFileAdapterTests
         }
     }
 
-    private static IMergeFileAdapter CreateAdapter(string filePath)
+    private static ITempFileAdapter CreateAdapter(string filePath)
     {
         return new MergeFileAdapter(
             new MergeFileConfig

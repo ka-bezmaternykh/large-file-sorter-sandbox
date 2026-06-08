@@ -7,14 +7,14 @@ public sealed class ChunkFileWriter : IChunkFileWriter
 {
     private const int BufferSizeBytes = 64 * 1024;
 
-    private readonly IChunkFileAdapter _chunkFileAdapter;
+    private readonly ITempFileAdapter _chunkFileAdapter;
     private readonly byte[] _buffer = new byte[BufferSizeBytes];
     private readonly ILogger<ChunkFileWriter> _logger;
     private FileStream? _stream;
     private int _bufferedBytes;
     private bool _disposed;
 
-    public ChunkFileWriter(IChunkFileAdapter chunkFileAdapter, ILogger<ChunkFileWriter> logger)
+    public ChunkFileWriter(ITempFileAdapter chunkFileAdapter, ILogger<ChunkFileWriter> logger)
     {
         ArgumentNullException.ThrowIfNull(chunkFileAdapter);
         ArgumentNullException.ThrowIfNull(logger);

@@ -14,7 +14,7 @@ public class ChunkFileAdapterTests
 
         try
         {
-            IChunkFileAdapter adapter = CreateAdapter(tempFilePath);
+            ITempFileAdapter adapter = CreateAdapter(tempFilePath);
 
             using var stream = adapter.OpenWriteStream();
 
@@ -37,7 +37,7 @@ public class ChunkFileAdapterTests
 
         try
         {
-            IChunkFileAdapter adapter = CreateAdapter(tempFilePath);
+            ITempFileAdapter adapter = CreateAdapter(tempFilePath);
             await adapter.CompleteWriteAsync();
 
             using var stream = adapter.OpenReadStream();
@@ -60,7 +60,7 @@ public class ChunkFileAdapterTests
 
         try
         {
-            IChunkFileAdapter adapter = CreateAdapter(tempFilePath);
+            ITempFileAdapter adapter = CreateAdapter(tempFilePath);
 
             Assert.Throws<InvalidOperationException>(() => adapter.OpenReadStream());
         }
@@ -79,7 +79,7 @@ public class ChunkFileAdapterTests
 
         try
         {
-            IChunkFileAdapter adapter = CreateAdapter(tempFilePath);
+            ITempFileAdapter adapter = CreateAdapter(tempFilePath);
 
             using var stream = adapter.OpenWriteStream();
             using var writer = new StreamWriter(stream);
@@ -115,7 +115,7 @@ public class ChunkFileAdapterTests
         }
     }
 
-    private static IChunkFileAdapter CreateAdapter(string filePath)
+    private static ITempFileAdapter CreateAdapter(string filePath)
     {
         return new ChunkFileAdapter(
             new ChunkFileConfig

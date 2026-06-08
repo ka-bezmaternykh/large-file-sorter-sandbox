@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LargeFile.Sorter.Services;
 
-public sealed class ChunkFileAdapter : IChunkFileAdapter
+public sealed class ChunkFileAdapter : ITempFileAdapter
 {
     private readonly ILogger<ChunkFileAdapter> _logger;
     private FileStream? _writeStream;

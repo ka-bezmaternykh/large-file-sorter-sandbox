@@ -8,14 +8,14 @@ namespace LargeFile.Sorter.Services;
 
 public sealed class ChunkFileReader : IChunkFileReader
 {
-    private readonly IChunkFileAdapter _chunkFileAdapter;
+    private readonly ITempFileAdapter _chunkFileAdapter;
     private readonly IRowParser _rowParser;
     private readonly ILogger<ChunkFileReader> _logger;
     private FileStream? _stream;
     private PipeReader? _pipeReader;
     private bool _disposed;
 
-    public ChunkFileReader(IChunkFileAdapter chunkFileAdapter, IRowParser rowParser, ILogger<ChunkFileReader> logger)
+    public ChunkFileReader(ITempFileAdapter chunkFileAdapter, IRowParser rowParser, ILogger<ChunkFileReader> logger)
     {
         ArgumentNullException.ThrowIfNull(chunkFileAdapter);
         ArgumentNullException.ThrowIfNull(rowParser);
