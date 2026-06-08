@@ -87,11 +87,7 @@ public sealed class ChunkSorter : IChunkSorter
     private async Task SortAsync(CancellationToken cancellationToken)
     {
         _logger.LogDebug("Chunk sorter started processing chunk.");
-        var chunkBuffer = new ArrayBufferWriter<byte>();
-
-        await ReadChunkToBuffer(cancellationToken, chunkBuffer);
-
-        var items = ParseItems(chunkBuffer.WrittenSpan);
+        var items = await ReadItemsAsync(cancellationToken);
         items.Sort(_itemComparer);
 
         await WriteSortedListAsync(items, cancellationToken);
@@ -99,24 +95,63 @@ public sealed class ChunkSorter : IChunkSorter
         _logger.LogDebug("Chunk sorter completed writing sorted chunk output.");
     }
 
-    private async Task ReadChunkToBuffer(CancellationToken cancellationToken, ArrayBufferWriter<byte> chunkBuffer)
+    private async Task<List<Item>> ReadItemsAsync(CancellationToken cancellationToken)
     {
+        var items = new List<Item>();
+
         while (true)
         {
             var readResult = await _pipe.Reader.ReadAsync(cancellationToken);
-            var buffer = readResult.Buffer;
-
-            foreach (var segment in buffer)
-            {
-                chunkBuffer.Write(segment.Span);
-            }
-
-            _pipe.Reader.AdvanceTo(buffer.End);
+            ProcessReadResult(readResult.Buffer, readResult.IsCompleted, items, out var consumed);
+            _pipe.Reader.AdvanceTo(consumed, readResult.Buffer.End);
 
             if (readResult.IsCompleted)
             {
                 break;
             }
+        }
+
+        return items;
+    }
+
+    private void ProcessReadResult(
+        ReadOnlySequence<byte> buffer,
+        bool isCompleted,
+        List<Item> items,
+        out SequencePosition consumed)
+    {
+        var reader = new SequenceReader<byte>(buffer);
+        consumed = buffer.Start;
+
+        while (reader.TryReadTo(out ReadOnlySequence<byte> row, (byte)'\n'))
+        {
+            consumed = reader.Position;
+
+            if (!_rowParser.TryParse(row, out var item))
+            {
+                throw new InvalidDataException("Chunk contains an invalid row.");
+            }
+
+            items.Add(item);
+        }
+
+        if (isCompleted)
+        {
+            if (!reader.End)
+            {
+                var row = buffer.Slice(reader.Position);
+                if (!row.IsEmpty)
+                {
+                    if (!_rowParser.TryParse(row, out var item))
+                    {
+                        throw new InvalidDataException("Chunk contains an invalid row.");
+                    }
+
+                    items.Add(item);
+                }
+            }
+
+            consumed = buffer.End;
         }
     }
 
@@ -140,49 +175,5 @@ public sealed class ChunkSorter : IChunkSorter
                 ArrayPool<byte>.Shared.Return(buffer);
             }
         }
-    }
-
-    private List<Item> ParseItems(ReadOnlySpan<byte> chunk)
-    {
-        if (chunk.IsEmpty)
-        {
-            return [];
-        }
-
-        var items = new List<Item>();
-        var lineStart = 0;
-
-        for (var index = 0; index < chunk.Length; index++)
-        {
-            if (chunk[index] != (byte)'\n')
-            {
-                continue;
-            }
-
-            ParseRow(chunk[lineStart..index], items);
-            lineStart = index + 1;
-        }
-
-        if (lineStart < chunk.Length)
-        {
-            ParseRow(chunk[lineStart..], items);
-        }
-
-        return items;
-    }
-
-    private void ParseRow(ReadOnlySpan<byte> row, List<Item> items)
-    {
-        if (!row.IsEmpty && row[^1] == (byte)'\r')
-        {
-            row = row[..^1];
-        }
-
-        if (!_rowParser.TryParse(row, out var item))
-        {
-            throw new InvalidDataException("Chunk contains an invalid row.");
-        }
-
-        items.Add(item);
     }
 }

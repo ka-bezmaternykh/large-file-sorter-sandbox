@@ -127,7 +127,7 @@ public sealed class InputFileReader : IInputFileReader
             throw;
         }
 
-        _logger.LogDebug(
+        _logger.LogTrace(
             "Read {BytesWritten} bytes into chunk writer. ChunkSize={ChunkSize}, IsCompleted={IsCompleted}",
             totalWritten,
             chunkSize,
