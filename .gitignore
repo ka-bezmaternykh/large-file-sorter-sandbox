@@ -61,3 +61,4 @@ LargeFiles/*
 */Release/*
 *.sln.dotsettings.user
 temp/*
+/.tools/*
