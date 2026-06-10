@@ -98,6 +98,7 @@ Solutions will be assessed on:
 - Uses a dedicated file adapter layer to isolate file system operations from export logic.
 - Uses a buffered file exporter that writes rows asynchronously in batches to reduce write overhead.
 - Separates item generation, row formatting, and file export into isolated components to keep the implementation testable and easier to evolve.
+- Includes periodic progress reporting with a progress bar-style log output for long-running generation.
 - Supports graceful cancellation with `Ctrl+C`.
 - Includes unit and integration-style tests for parsing, validation, generation, formatting, file handling, and export behavior.
 - Includes a small performance measurement script for running the published generator and collecting execution time, output file size, and memory usage.
@@ -138,6 +139,6 @@ This gives you one complete large-file flow from generation to sorting with matc
 
 ### Dummy File Generator TODO
 
-- Add a progress bar.
 - Add multithreaded generation.
 - Refactor text generation from ASCII-specific logic to proper UTF-8 support.
+- Reduce per-row allocations in `ItemsGenerator` to improve generation throughput.

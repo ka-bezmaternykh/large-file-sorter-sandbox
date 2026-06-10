@@ -1,6 +1,5 @@
 using DummyFile.Generator.Config;
 using DummyFile.Generator.Services;
-using DummyFile.Generator.Services.Abstract;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
@@ -96,7 +95,13 @@ class Program
         };
         var generatorConfig = new GeneratorConfig
         {
-            RequestedLinesNumber = options.FileSizeLines
+            RequestedLinesNumber = options.FileSizeLines,
+            RequestedFileSizeBytes = options.FileSizeBytes
+        };
+        var progressConfig = new ProgressConfig
+        {
+            RequestedLinesNumber = options.FileSizeLines,
+            RequestedFileSizeBytes = options.FileSizeBytes
         };
         var fileExporterConfig = new FileExporterConfig
         {
@@ -109,10 +114,14 @@ class Program
             fileAdapter,
             loggerFactory.CreateLogger<FileExporter>(),
             fileExporterConfig);
+        var progressLogger = new ProgressLogger(
+            loggerFactory.CreateLogger<ProgressLogger>(),
+            progressConfig);
         var generator = new Services.Generator(
             itemsGenerator,
             rowFormatter,
             fileExporter,
+            progressLogger,
             loggerFactory.CreateLogger<Services.Generator>(),
             generatorConfig);
 
