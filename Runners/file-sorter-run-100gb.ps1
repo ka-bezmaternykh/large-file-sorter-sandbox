@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
-$env:DOTNET_GCHeapHardLimit = "0x100000000" # 4 GiB
+#$env:DOTNET_GCHeapHardLimit = "0x100000000" # 4 GiB
 # $env:DOTNET_GCHeapHardLimit = "0x200000000" # 8 GiB
-# $env:DOTNET_GCHeapHardLimit = "0x300000000" # 12 GiB
+$env:DOTNET_GCHeapHardLimit = "0x300000000" # 12 GiB
 # $env:DOTNET_GCHeapHardLimit = "0x400000000" # 16 GiB
 
 $releaseDir = Resolve-Path (Join-Path $PSScriptRoot "..\LargeFile.Sorter\Release")
