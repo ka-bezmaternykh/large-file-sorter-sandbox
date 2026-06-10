@@ -113,8 +113,7 @@ Solutions will be assessed on:
 
 ### Dummy File Generator TODO
 
-- Add multithreaded generation.
-- Refactor text generation from ASCII-specific logic to proper UTF-8 support.
+- Add multithreaded generation, if it worth it
 - Reduce per-row allocations in `ItemsGenerator` to improve generation throughput.
 
 ## Large File Sorter
