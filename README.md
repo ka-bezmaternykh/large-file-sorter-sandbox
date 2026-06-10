@@ -130,11 +130,11 @@ Solutions will be assessed on:
 - Supports command-line parameters for input file `--file ..\LargeFiles\unsorted-1gb.txt`, output file `--output-file ..\LargeFiles\sorted-1gb.txt`, temp files directory `--temp-files-dir ..\temp`, overwrite mode `--force`, and help output `--help`. 
 - Supports graceful cancellation with `Ctrl+C`.
 - Uses chunk-based external sorting with a configurable 128 MB chunk target and newline-aware chunk boundaries.
+- Supports bounded chunk processing with **concurrent execution limiting** based on configured chunk size, available memory, and detected level of parallelism.
 - Reads the source file through `System.IO.Pipelines` and pushes chunk data into sorter pipelines without loading the entire input into memory.
 - Parses rows into compact `Item` objects that store `long Number` and UTF-8 `TextBytes`.
 - Sorts chunk items in memory and writes sorted chunk files through buffered temp-file writers.
 - Uses explicit temp-file ownership so chunk and merge file streams are opened, completed, and disposed by their adapters.
-- Supports bounded concurrent chunk processing with execution limiting based on configured chunk size, available memory, and detected level of parallelism.
 - Supports single-file promotion when only one sorted chunk remains.
 - Supports multi-pass merge batching using `MergeConfig.MaxChunkFilesPerMerge`, including cleanup of intermediate merge files between passes.
 - Uses pooled reusable formatting buffers during merge to reduce repeated temporary allocations.
@@ -144,12 +144,15 @@ Solutions will be assessed on:
 ### Large File Sorter TODO
 
 - Add proper progress logging
+- Add parallel processing for merge batches
 
 ## Runners
 
 Launch scripts live in the root `Runners/` folder.
 
 The runner scripts were written in PowerShell because Windows was explicitly allowed by the assignment assumptions. At the same time, the overall application logic is not tied to Windows, and the published sorter and generator can also be executed from Linux with equivalent command-line arguments.
+
+The sorter runner scripts also set an **explicit managed memory cap** through the `DOTNET_GCHeapHardLimit` environment variable.
 
 ### Publish
 
@@ -190,6 +193,24 @@ This gives you one complete large-file flow from generation to sorting with matc
 
 This is the full high-volume scenario targeted by the assignment and uses the same runner layout as the smaller examples.
 
+## Performance testing
+
+Performance testing was performed with both internal and external tools.
+
+### Internal tools
+
+- `Process` memory metrics such as `WorkingSet64` were used to observe current and peak working set values during execution.
+- `Stopwatch` was used to measure the total execution time of selected generation and sorting scenarios.
+
+### External tools
+
+- `dotnet-counters` was used to inspect runtime counters and observe process behavior under load.
+- `JetBrains dotMemory` was used for memory profiling and allocation analysis.
+
+### TODO
+
+- Add scripts for running `dotnet-counters` and logging the captured results.
+- Add `BenchmarkDotNet` benchmarks to optimize hot paths inside both applications.
 
 ## Disclaimer
 
