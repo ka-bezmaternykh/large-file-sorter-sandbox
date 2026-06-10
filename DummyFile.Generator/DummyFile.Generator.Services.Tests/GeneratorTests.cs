@@ -16,6 +16,7 @@ public class GeneratorTests
             itemsGenerator,
             rowFormatter,
             fileExporter,
+            new FakeProgressLogger(),
             NullLogger<Generator>.Instance,
             new GeneratorConfig
             {
@@ -37,6 +38,7 @@ public class GeneratorTests
             itemsGenerator,
             rowFormatter,
             fileExporter,
+            new FakeProgressLogger(),
             NullLogger<Generator>.Instance,
             new GeneratorConfig
             {
@@ -60,6 +62,7 @@ public class GeneratorTests
             itemsGenerator,
             rowFormatter,
             fileExporter,
+            new FakeProgressLogger(),
             NullLogger<Generator>.Instance,
             new GeneratorConfig());
 
@@ -134,6 +137,13 @@ public class GeneratorTests
         public ValueTask DisposeAsync()
         {
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class FakeProgressLogger : IProgressLogger
+    {
+        public void LogProgress(long writtenBytes, int generatedLines, bool isFinal)
+        {
         }
     }
 }

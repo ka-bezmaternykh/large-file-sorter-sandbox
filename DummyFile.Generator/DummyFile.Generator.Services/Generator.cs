@@ -1,5 +1,6 @@
 using DummyFile.Generator.Services.Abstract;
 using Microsoft.Extensions.Logging;
+using System.Threading;
 
 namespace DummyFile.Generator.Services;
 
@@ -7,6 +8,7 @@ public class Generator(
     IItemsGenerator itemsGenerator,
     IRowFormatter rowFormatter,
     IFileExporter fileExporter,
+    IProgressLogger progressLogger,
     ILogger<Generator> logger,
     GeneratorConfig config)
 {
@@ -14,16 +16,19 @@ public class Generator(
     // Expected max row length is 1037 bytes: 10 for int, 2 for ". ", 1024 for text, 1 for '\n'.
     // 1100 keeps a small safety margin without over-allocating too much.
     private const int RowBufferSizeBytes = 1100;
+    private int _generatedLines;
+
+    public int GeneratedLines => Volatile.Read(ref _generatedLines);
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
         var rowBuffer = new byte[RowBufferSizeBytes];
-        var generatedLines = 0;
         var maxLines = config.RequestedLinesNumber;
+        long writtenBytes = 0;
 
         logger.LogInformation("Generator loop started. MaxLines={MaxLines}", maxLines);
 
-        while (!cancellationToken.IsCancellationRequested && (!maxLines.HasValue || generatedLines < maxLines.Value))
+        while (!cancellationToken.IsCancellationRequested && (!maxLines.HasValue || GeneratedLines < maxLines.Value))
         {
             itemsGenerator.Generate(out var item);
             if (!rowFormatter.TryFormat(item, rowBuffer, out var written))
@@ -38,12 +43,17 @@ public class Generator(
                 break;
             }
 
-            generatedLines++;
+            Interlocked.Increment(ref _generatedLines);
+            writtenBytes += written;
+
+            progressLogger.LogProgress(writtenBytes, GeneratedLines, isFinal: false);
         }
+
+        progressLogger.LogProgress(writtenBytes, GeneratedLines, isFinal: true);
 
         logger.LogInformation(
             "Generator loop finished. GeneratedLines={GeneratedLines}, CancellationRequested={CancellationRequested}",
-            generatedLines,
+            GeneratedLines,
             cancellationToken.IsCancellationRequested);
     }
 }

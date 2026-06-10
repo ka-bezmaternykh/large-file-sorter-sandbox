@@ -5,7 +5,7 @@ namespace DummyFile.Generator.Services;
 
 public sealed class FileExporter : IFileExporter
 {
-    private const int BufferSizeBytes = 4 * 1024;
+    private const int BufferSizeBytes = 64 * 1024;
 
     private readonly Stream _stream;
     private readonly byte[] _buffer = new byte[BufferSizeBytes];
