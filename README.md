@@ -78,6 +78,14 @@ Solutions will be assessed on:
 2. Available memory: 16 GB
 3. Has free hard drive space for temporary files and a separately sorted file. There will be enough space, but the algorithm shouldn't rely on it. Proper error handling is expected.
 
+## Repository Structure Design Decisions
+
+- A single repository was used even though the assignment contains two separate applications. This keeps the full workflow in one place: file generation, file sorting, shared documentation, runner scripts, and performance notes can evolve together without being split across multiple repositories.
+- Each application has its own solution file so their implementations stay operationally independent. `DummyFile.Generator` and `LargeFile.Sorter` can be built, tested, published, and evolved separately without forcing a shared solution structure where it is not needed.
+- `LargeFiles/` stores generated input files and produced sorted output files for manual runs and large-scenario testing. Added to `.gitignore`
+- `Runners/` stores PowerShell helper scripts for publishing and launching the generator and sorter in repeatable scenarios such as `100 MB`, `1 GB`, `10 GB`, and `100 GB`.
+- `temp/` is the working directory for temporary chunk files and intermediate merge files created by the sorter during external sorting. Added to `.gitignore`
+
 ## Dummy File Generator
 
 ### Design Decisions
