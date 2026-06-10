@@ -103,9 +103,53 @@ Solutions will be assessed on:
 - Includes unit and integration-style tests for parsing, validation, generation, formatting, file handling, and export behavior.
 - Includes a small performance measurement script for running the published generator and collecting execution time, output file size, and memory usage.
 
+### Dummy File Generator TODO
+
+- Add multithreaded generation.
+- Refactor text generation from ASCII-specific logic to proper UTF-8 support.
+- Reduce per-row allocations in `ItemsGenerator` to improve generation throughput.
+
+## Large File Sorter
+
+### Design Decisions
+
+- The sorter console application uses the standard .NET application infrastructure with `HostApplicationBuilder`, dependency injection, and structured logging. This was chosen because the sorting pipeline is materially more complex than the generator and benefits from explicit composition and lifecycle management.
+- The sorter is built around the **external merge sort** algorithm with **k-way merge**. This approach was chosen because the assignment explicitly targets files that are much larger than available memory, so the solution must split the source into sorted chunks and then merge those chunks back into the final output.
+- Input, chunk, and merge file access are isolated behind dedicated temporary file abstractions. This keeps file system stream ownership separate from sorting and merge orchestration, and makes disposal and cleanup rules explicit.
+- The implementation follows an external sorting design. The source file is split into bounded sorted chunks first, and only then merged. This keeps the algorithm workable for very large inputs that cannot fit into memory.
+- Chunk processing and merge processing intentionally reuse shared abstractions such as `ITempFileAdapter`, `ITempFileWriter`, and `ITempFileReader`. This reduces duplication between chunk files and intermediate merge files and keeps the temp-file lifecycle consistent across phases.
+- Chunk records are represented as parsed `Item` objects that store the numeric part separately from the UTF-8 bytes of the text part. This avoids allocating a managed `string` per row and keeps in-memory sorting more memory-efficient.
+- Formatting is isolated behind `IItemFormatter`. The default implementation writes text rows, while a binary formatter contract is already reserved for future optimization without forcing changes into the sorting pipeline.
+- Chunk execution concurrency is intentionally gated by `IChunkExecutionLimiter`, which combines memory and CPU heuristics. This keeps the number of active chunk sorters bounded instead of letting the reader flood the machine with too many in-flight chunks.
+- Merge is implemented as a multi-pass batched k-way merge. Each pass merges at most `MergeConfig.MaxChunkFilesPerMerge` files into intermediate outputs until only one file remains. This avoids relying on opening an arbitrary number of files simultaneously.
+- The default value of `MergeConfig.MaxChunkFilesPerMerge` was chosen empirically as `64`. With the default chunk size of `128 MB`, a `100 GB` source file is expected to produce about `800` chunk files, and that fan-in allows the merge phase to finish in two passes.
+
+### Developed Features
+
+- Sorts rows in the `<Number>. <String>` format by text ascending and number ascending for ties.
+- Supports command-line parameters for input file `--file ..\LargeFiles\unsorted-1gb.txt`, output file `--output-file ..\LargeFiles\sorted-1gb.txt`, temp files directory `--temp-files-dir ..\temp`, overwrite mode `--force`, and help output `--help`. 
+- Supports graceful cancellation with `Ctrl+C`.
+- Uses chunk-based external sorting with a configurable 128 MB chunk target and newline-aware chunk boundaries.
+- Reads the source file through `System.IO.Pipelines` and pushes chunk data into sorter pipelines without loading the entire input into memory.
+- Parses rows into compact `Item` objects that store `long Number` and UTF-8 `TextBytes`.
+- Sorts chunk items in memory and writes sorted chunk files through buffered temp-file writers.
+- Uses explicit temp-file ownership so chunk and merge file streams are opened, completed, and disposed by their adapters.
+- Supports bounded concurrent chunk processing with execution limiting based on configured chunk size, available memory, and detected level of parallelism.
+- Supports single-file promotion when only one sorted chunk remains.
+- Supports multi-pass merge batching using `MergeConfig.MaxChunkFilesPerMerge`, including cleanup of intermediate merge files between passes.
+- Uses pooled reusable formatting buffers during merge to reduce repeated temporary allocations.
+- Logs environment information, chunk execution limits, and final memory metrics through the application logger.
+- Includes unit and integration-style tests for command-line parsing, host wiring, input reading, chunk sorting, temp-file lifecycle, merge behavior, and end-to-end application flow.
+
+### Large File Sorter TODO
+
+- Add proper progress logging
+
 ## Runners
 
 Launch scripts live in the root `Runners/` folder.
+
+The runner scripts were written in PowerShell because Windows was explicitly allowed by the assignment assumptions. At the same time, the overall application logic is not tied to Windows, and the published sorter and generator can also be executed from Linux with equivalent command-line arguments.
 
 ### Publish
 
@@ -137,8 +181,16 @@ Launch scripts live in the root `Runners/` folder.
 
 This gives you one complete large-file flow from generation to sorting with matching input and output names.
 
-### Dummy File Generator TODO
+### Example Scenario: 100 GB
 
-- Add multithreaded generation.
-- Refactor text generation from ASCII-specific logic to proper UTF-8 support.
-- Reduce per-row allocations in `ItemsGenerator` to improve generation throughput.
+1. Run `file-generator-release.ps1` to publish the generator into `DummyFile.Generator/Release`.
+2. Run `file-generator-run-100gb.ps1` to create `LargeFiles/unsorted-100gb.txt`.
+3. Run `file-sorter-release.ps1` to publish the sorter into `LargeFile.Sorter/Release`.
+4. Run `file-sorter-run-100gb.ps1` to sort `LargeFiles/unsorted-100gb.txt` into `LargeFiles/sorted-100gb.txt`.
+
+This is the full high-volume scenario targeted by the assignment and uses the same runner layout as the smaller examples.
+
+
+## Disclaimer
+
+During the work on this assignment, one senior engineer, several Codex agents, and a fair amount of Russian profanity were observed. No agents were harmed in the process.
