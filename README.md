@@ -122,6 +122,7 @@ Solutions will be assessed on:
 - Formatting is isolated behind `IItemFormatter`. The default implementation writes text rows, while a binary formatter contract is already reserved for future optimization without forcing changes into the sorting pipeline.
 - Chunk execution concurrency is intentionally gated by `IChunkExecutionLimiter`, which combines memory and CPU heuristics. This keeps the number of active chunk sorters bounded instead of letting the reader flood the machine with too many in-flight chunks.
 - Merge is implemented as a multi-pass batched k-way merge. Each pass merges at most `MergeConfig.MaxChunkFilesPerMerge` files into intermediate outputs until only one file remains. This avoids relying on opening an arbitrary number of files simultaneously.
+- The merge phase uses `PriorityQueue` as the in-memory structure for selecting the next smallest row across active temp files. This keeps the k-way merge logic simple, explicit, and efficient for batched merge passes.
 - The default value of `MergeConfig.MaxChunkFilesPerMerge` was chosen empirically as `64`. With the default chunk size of `128 MB`, a `100 GB` source file is expected to produce about `800` chunk files, and that fan-in allows the merge phase to finish in two passes.
 
 ### Developed Features
