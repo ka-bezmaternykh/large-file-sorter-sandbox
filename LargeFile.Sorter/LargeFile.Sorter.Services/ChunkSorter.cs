@@ -91,13 +91,14 @@ public sealed class ChunkSorter : IChunkSorter
         items.Sort(_itemComparer);
 
         await WriteSortedListAsync(items, cancellationToken);
+        items.Clear();
         await _chunkFileWriter.FlushAsync(cancellationToken);
         _logger.LogDebug("Chunk sorter completed writing sorted chunk output.");
     }
 
     private async Task<List<Item>> ReadItemsAsync(CancellationToken cancellationToken)
     {
-        var items = new List<Item>();
+        var items = new List<Item>(100000);
 
         while (true)
         {
