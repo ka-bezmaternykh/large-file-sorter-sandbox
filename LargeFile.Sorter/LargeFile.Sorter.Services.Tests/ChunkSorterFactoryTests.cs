@@ -29,6 +29,13 @@ public class ChunkSorterFactoryTests
         {
             ReportInterval = TimeSpan.FromSeconds(5)
         });
+        services.AddSingleton(new MergeConfig
+        {
+            MaxChunkFilesPerMerge = 64,
+            MaxConcurrentMergeBatches = 4,
+            TempFilesFolder = tempDirectoryPath,
+            MergeFileTemplate = "merge-{0:D4}.tmp"
+        });
         services.AddLargeFileSorterServices();
 
         await using var serviceProvider = services.BuildServiceProvider();

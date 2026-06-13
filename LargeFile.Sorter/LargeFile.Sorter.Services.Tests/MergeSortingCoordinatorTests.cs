@@ -5,10 +5,34 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LargeFile.Sorter.Services.Tests;
 
-public class MergeSorterTests
+public class MergeSortingCoordinatorTests
 {
     [Fact]
-    public async Task MergeAsync_ShouldMergeChunkFilesIntoOutputFile()
+    public async Task PromoteFinalAsync_ShouldPromoteSingleChunkFileToOutputFile()
+    {
+        var tempDirectoryPath = CreateTempDirectory();
+        var outputFilePath = Path.Combine(tempDirectoryPath, "sorted.txt");
+        var chunkPath = Path.Combine(tempDirectoryPath, "chunk-0001.tmp");
+        await File.WriteAllTextAsync(chunkPath, "1. Apple\n");
+
+        await using var serviceProvider = BuildServiceProvider(tempDirectoryPath, outputFilePath);
+        var coordinator = serviceProvider.GetRequiredService<IMergeSortingCoordinator>();
+
+        coordinator.Start(new Dictionary<int, ITempFileAdapter>
+        {
+            [1] = await CreateCompletedAdapterAsync(chunkPath)
+        });
+
+        await coordinator.PromoteFinalAsync();
+
+        Assert.Equal("1. Apple\n", await File.ReadAllTextAsync(outputFilePath));
+        Assert.False(File.Exists(chunkPath));
+
+        DeleteDirectory(tempDirectoryPath);
+    }
+
+    [Fact]
+    public async Task MergePipeline_ShouldMergeChunkFilesIntoOutputFile()
     {
         var tempDirectoryPath = CreateTempDirectory();
         var outputFilePath = Path.Combine(tempDirectoryPath, "sorted.txt");
@@ -19,15 +43,15 @@ public class MergeSorterTests
         await File.WriteAllTextAsync(secondChunkPath, "1. Apple\n3. Banana\n");
 
         await using var serviceProvider = BuildServiceProvider(tempDirectoryPath, outputFilePath);
-        var mergeSorter = serviceProvider.GetRequiredService<IMergeSorter>();
+        var coordinator = serviceProvider.GetRequiredService<IMergeSortingCoordinator>();
 
-        var chunkFileAdapters = new Dictionary<int, ITempFileAdapter>
+        coordinator.Start(new Dictionary<int, ITempFileAdapter>
         {
             [1] = await CreateCompletedAdapterAsync(firstChunkPath),
             [2] = await CreateCompletedAdapterAsync(secondChunkPath)
-        };
+        });
 
-        await mergeSorter.MergeAsync(chunkFileAdapters);
+        await RunMergeLoopAsync(coordinator);
 
         Assert.Equal("1. Apple\n2. Apple\n3. Banana\n4. Cherry\n", await File.ReadAllTextAsync(outputFilePath));
         Assert.False(File.Exists(firstChunkPath));
@@ -37,31 +61,7 @@ public class MergeSorterTests
     }
 
     [Fact]
-    public async Task MergeAsync_ShouldPromoteSingleChunkFileToOutputFile()
-    {
-        var tempDirectoryPath = CreateTempDirectory();
-        var outputFilePath = Path.Combine(tempDirectoryPath, "sorted.txt");
-        var chunkPath = Path.Combine(tempDirectoryPath, "chunk-0001.tmp");
-        await File.WriteAllTextAsync(chunkPath, "1. Apple\n");
-
-        await using var serviceProvider = BuildServiceProvider(tempDirectoryPath, outputFilePath);
-        var mergeSorter = serviceProvider.GetRequiredService<IMergeSorter>();
-
-        var chunkFileAdapters = new Dictionary<int, ITempFileAdapter>
-        {
-            [1] = await CreateCompletedAdapterAsync(chunkPath)
-        };
-
-        await mergeSorter.MergeAsync(chunkFileAdapters);
-
-        Assert.Equal("1. Apple\n", await File.ReadAllTextAsync(outputFilePath));
-        Assert.False(File.Exists(chunkPath));
-
-        DeleteDirectory(tempDirectoryPath);
-    }
-
-    [Fact]
-    public async Task MergeAsync_ShouldMergeMultiplePassesWhenBatchLimitIsExceeded()
+    public async Task MergePipeline_ShouldMergeMultiplePassesWhenBatchLimitIsExceeded()
     {
         var tempDirectoryPath = CreateTempDirectory();
         var outputFilePath = Path.Combine(tempDirectoryPath, "sorted.txt");
@@ -73,18 +73,18 @@ public class MergeSorterTests
         await File.WriteAllTextAsync(Path.Combine(tempDirectoryPath, "chunk-0005.tmp"), "3. Banana\n");
 
         await using var serviceProvider = BuildServiceProvider(tempDirectoryPath, outputFilePath, maxChunkFilesPerMerge: 2);
-        var mergeSorter = serviceProvider.GetRequiredService<IMergeSorter>();
+        var coordinator = serviceProvider.GetRequiredService<IMergeSortingCoordinator>();
 
-        var chunkFileAdapters = new Dictionary<int, ITempFileAdapter>
+        coordinator.Start(new Dictionary<int, ITempFileAdapter>
         {
             [1] = await CreateCompletedAdapterAsync(Path.Combine(tempDirectoryPath, "chunk-0001.tmp")),
             [2] = await CreateCompletedAdapterAsync(Path.Combine(tempDirectoryPath, "chunk-0002.tmp")),
             [3] = await CreateCompletedAdapterAsync(Path.Combine(tempDirectoryPath, "chunk-0003.tmp")),
             [4] = await CreateCompletedAdapterAsync(Path.Combine(tempDirectoryPath, "chunk-0004.tmp")),
             [5] = await CreateCompletedAdapterAsync(Path.Combine(tempDirectoryPath, "chunk-0005.tmp"))
-        };
+        });
 
-        await mergeSorter.MergeAsync(chunkFileAdapters);
+        await RunMergeLoopAsync(coordinator);
 
         Assert.Equal("1. Apple\n2. Apple\n3. Banana\n4. Banana\n5. Cherry\n", await File.ReadAllTextAsync(outputFilePath));
         Assert.Empty(Directory.GetFiles(tempDirectoryPath, "*.tmp"));
@@ -92,7 +92,26 @@ public class MergeSorterTests
         DeleteDirectory(tempDirectoryPath);
     }
 
-    private static ServiceProvider BuildServiceProvider(string tempDirectoryPath, string outputFilePath, int maxChunkFilesPerMerge = 64)
+    private static async Task RunMergeLoopAsync(IMergeSortingCoordinator coordinator)
+    {
+        while (coordinator.HasMoreThanOneFile)
+        {
+            while (coordinator.HasNextBatch)
+            {
+                await coordinator.MergeNextBatchAsync();
+            }
+
+            await coordinator.CompleteCurrentPassAsync();
+        }
+
+        await coordinator.PromoteFinalAsync();
+    }
+
+    private static ServiceProvider BuildServiceProvider(
+        string tempDirectoryPath,
+        string outputFilePath,
+        int maxChunkFilesPerMerge = 64,
+        int maxConcurrentMergeBatches = 4)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -105,8 +124,15 @@ public class MergeSorterTests
         services.AddSingleton(new MergeConfig
         {
             MaxChunkFilesPerMerge = maxChunkFilesPerMerge,
+            MaxConcurrentMergeBatches = maxConcurrentMergeBatches,
             TempFilesFolder = tempDirectoryPath,
             MergeFileTemplate = "merge-{0:D4}.tmp"
+        });
+        services.AddSingleton(new ChunkConfig
+        {
+            ChunkSize = 128 * 1024 * 1024,
+            TempFilesFolder = tempDirectoryPath,
+            TempFileTemplate = "chunk-{0:D4}.tmp"
         });
         services.AddSingleton(new ChunkingProgressConfig
         {

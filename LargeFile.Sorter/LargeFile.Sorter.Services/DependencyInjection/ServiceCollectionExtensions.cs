@@ -21,11 +21,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEnvironmentMonitor, EnvironmentMonitor>();
         services.AddSingleton<IChunkingProgressReporter, ChunkingProgressReporter>();
         services.AddSingleton<IChunkExecutionLimiter, ChunkExecutionLimiter>();
+        services.AddSingleton<IMergeExecutionLimiter, MergeExecutionLimiter>();
         services.AddSingleton<IInputFileAdapter, InputFileAdapter>();
         services.AddTransient<IRowParser, RowParser>();
         services.AddTransient<IComparer<Models.Item>, ItemComparer>();
         services.AddTransient<IItemFormatter, TextRowFormatter>();
-        services.AddSingleton<IMergeSorter, MergeSorter>();
+        services.AddSingleton<IMergeBatchProcessor, MergeBatchProcessor>();
+        services.AddSingleton<IMergeSortingCoordinator, MergeSortingCoordinator>();
         // TODO Binary file optimization
         //services.AddSingleton<BinaryRowFormatter>();
         services.AddTransient<IInputFileReader, InputFileReader>();

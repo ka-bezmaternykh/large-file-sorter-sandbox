@@ -10,7 +10,7 @@ public sealed class SorterApplication : ISorterApplication
     private readonly IChunkSorterFactory _chunkSorterFactory;
     private readonly IChunkingProgressReporter _chunkingProgressReporter;
     private readonly IInputFileAdapter _inputFileAdapter;
-    private readonly IMergeSorter _mergeSorter;
+    private readonly IMergeSortingCoordinator _mergeSortingCoordinator;
     private readonly IInputFileReader _inputFileReader;
     private readonly ILogger<SorterApplication> _logger;
 
@@ -19,7 +19,7 @@ public sealed class SorterApplication : ISorterApplication
         IChunkSorterFactory chunkSorterFactory,
         IChunkingProgressReporter chunkingProgressReporter,
         IInputFileAdapter inputFileAdapter,
-        IMergeSorter mergeSorter,
+        IMergeSortingCoordinator mergeSortingCoordinator,
         IInputFileReader inputFileReader,
         ILogger<SorterApplication> logger)
     {
@@ -27,7 +27,7 @@ public sealed class SorterApplication : ISorterApplication
         ArgumentNullException.ThrowIfNull(chunkSorterFactory);
         ArgumentNullException.ThrowIfNull(chunkingProgressReporter);
         ArgumentNullException.ThrowIfNull(inputFileAdapter);
-        ArgumentNullException.ThrowIfNull(mergeSorter);
+        ArgumentNullException.ThrowIfNull(mergeSortingCoordinator);
         ArgumentNullException.ThrowIfNull(inputFileReader);
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -35,7 +35,7 @@ public sealed class SorterApplication : ISorterApplication
         _chunkSorterFactory = chunkSorterFactory;
         _chunkingProgressReporter = chunkingProgressReporter;
         _inputFileAdapter = inputFileAdapter;
-        _mergeSorter = mergeSorter;
+        _mergeSortingCoordinator = mergeSortingCoordinator;
         _inputFileReader = inputFileReader;
         _logger = logger;
     }
@@ -60,10 +60,28 @@ public sealed class SorterApplication : ISorterApplication
             await _chunkSorterFactory.WaitAllAsync(cancellationToken);
             await _chunkingProgressReporter.CompleteAsync();
 
-            _logger.LogInformation("Chunk pipeline completed.");
+            _logger.LogDebug("Chunk pipeline completed.");
+
+            if (_chunkSorterFactory.ChunkFileAdapters.Count == 0)
+            {
+                _logger.LogWarning("Chunk pipeline produced no temp files. Merge phase will be skipped.");
+                return;
+            }
 
             _logger.LogInformation("Starting merging pipeline.");
-            await _mergeSorter.MergeAsync(_chunkSorterFactory.ChunkFileAdapters, cancellationToken);
+            _mergeSortingCoordinator.Start(_chunkSorterFactory.ChunkFileAdapters);
+
+            while (_mergeSortingCoordinator.HasMoreThanOneFile)
+            {
+                while (_mergeSortingCoordinator.HasNextBatch)
+                {
+                    await _mergeSortingCoordinator.MergeNextBatchAsync(cancellationToken);
+                }
+
+                await _mergeSortingCoordinator.CompleteCurrentPassAsync(cancellationToken);
+            }
+
+            await _mergeSortingCoordinator.PromoteFinalAsync(cancellationToken);
             _logger.LogInformation("Merging pipeline completed.");
         }
         catch (Exception exception)

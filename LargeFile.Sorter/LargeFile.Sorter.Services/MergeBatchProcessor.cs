@@ -8,97 +8,41 @@ using Microsoft.Extensions.Logging;
 
 namespace LargeFile.Sorter.Services;
 
-public sealed class MergeSorter : IMergeSorter
+public sealed class MergeBatchProcessor : IMergeBatchProcessor
 {
     private readonly MergeConfig _mergeConfig;
-    private readonly SorterRunOptions _sorterRunOptions;
     private readonly IServiceProvider _serviceProvider;
     private readonly IComparer<Item> _itemComparer;
     private readonly IItemFormatter _itemFormatter;
-    private readonly ILogger<MergeSorter> _logger;
+    private readonly ILogger<MergeBatchProcessor> _logger;
     private int _nextMergeNumber;
 
-    public MergeSorter(
+    public MergeBatchProcessor(
         MergeConfig mergeConfig,
-        SorterRunOptions sorterRunOptions,
         IServiceProvider serviceProvider,
         IComparer<Item> itemComparer,
         IItemFormatter itemFormatter,
-        ILogger<MergeSorter> logger)
+        ILogger<MergeBatchProcessor> logger)
     {
         ArgumentNullException.ThrowIfNull(mergeConfig);
-        ArgumentNullException.ThrowIfNull(sorterRunOptions);
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(itemComparer);
         ArgumentNullException.ThrowIfNull(itemFormatter);
         ArgumentNullException.ThrowIfNull(logger);
 
         _mergeConfig = mergeConfig;
-        _sorterRunOptions = sorterRunOptions;
         _serviceProvider = serviceProvider;
         _itemComparer = itemComparer;
         _itemFormatter = itemFormatter;
         _logger = logger;
     }
 
-    public async Task MergeAsync(IReadOnlyDictionary<int, ITempFileAdapter> chunkFileAdapters, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(chunkFileAdapters);
-
-        if (chunkFileAdapters.Count == 0)
-        {
-            _logger.LogInformation("No chunk files were produced. Merge phase is skipped.");
-            return;
-        }
-
-        var currentFiles = chunkFileAdapters
-            .OrderBy(pair => pair.Key)
-            .Select(pair => pair.Value)
-            .ToList();
-
-        while (currentFiles.Count > 1)
-        {
-            currentFiles = await RunMergePassAsync(currentFiles, cancellationToken);
-        }
-
-        var finalFile = currentFiles[0];
-        PromoteFileToOutput(finalFile.FilePath);
-        await finalFile.DisposeAsync();
-    }
-
-    private async Task<List<ITempFileAdapter>> RunMergePassAsync(
-        IReadOnlyList<ITempFileAdapter> inputFiles,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation(
-            "Starting merge pass for {InputFileCount} temp files with batch size {BatchSize}.",
-            inputFiles.Count,
-            _mergeConfig.MaxChunkFilesPerMerge);
-
-        var passResults = new List<ITempFileAdapter>();
-
-        for (var index = 0; index < inputFiles.Count; index += _mergeConfig.MaxChunkFilesPerMerge)
-        {
-            var batch = inputFiles
-                .Skip(index)
-                .Take(_mergeConfig.MaxChunkFilesPerMerge)
-                .ToList();
-
-            passResults.Add(await MergeBatchAsync(batch, cancellationToken));
-        }
-
-        _logger.LogInformation(
-            "Completed merge pass. Reduced {InputFileCount} temp files to {OutputFileCount}.",
-            inputFiles.Count,
-            passResults.Count);
-
-        return passResults;
-    }
-
-    private async Task<ITempFileAdapter> MergeBatchAsync(
+    public async Task<ITempFileAdapter> MergeBatchAsync(
         IReadOnlyList<ITempFileAdapter> batchFiles,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(batchFiles);
+
         if (batchFiles.Count == 0)
         {
             throw new InvalidOperationException("Merge batch cannot be empty.");
@@ -205,24 +149,6 @@ public sealed class MergeSorter : IMergeSorter
         var mergeNumber = Interlocked.Increment(ref _nextMergeNumber);
         var fileName = string.Format(CultureInfo.InvariantCulture, _mergeConfig.MergeFileTemplate, mergeNumber);
         return Path.Combine(_mergeConfig.TempFilesFolder, fileName);
-    }
-
-    private void PromoteFileToOutput(string sourcePath)
-    {
-        var outputDirectoryPath = Path.GetDirectoryName(_sorterRunOptions.OutputFilePath);
-        if (!string.IsNullOrWhiteSpace(outputDirectoryPath))
-        {
-            Directory.CreateDirectory(outputDirectoryPath);
-        }
-
-        if (File.Exists(_sorterRunOptions.OutputFilePath))
-        {
-            _logger.LogWarning("Output file already exists and will be replaced: {OutputFilePath}", _sorterRunOptions.OutputFilePath);
-            File.Delete(_sorterRunOptions.OutputFilePath);
-        }
-
-        File.Move(sourcePath, _sorterRunOptions.OutputFilePath);
-        _logger.LogInformation("Promoted merged file to output: {OutputFilePath}", _sorterRunOptions.OutputFilePath);
     }
 
     private static async Task DisposeTempFileAdaptersAsync(IEnumerable<ITempFileAdapter> tempFileAdapters)

@@ -11,6 +11,7 @@ try {
     # [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services', 'Debug', 'Process')
     # [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services.ChunkExecutionLimiter', 'Debug', 'Process')
     # [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services.ChunkSorterFactory', 'Debug', 'Process')
+    # [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services.MergeSortingCoordinator', 'Debug', 'Process')
     # [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services.SorterApplication', 'Debug', 'Process')
 
     $releaseDir = Resolve-Path (Join-Path $PSScriptRoot "..\LargeFile.Sorter\Release")
@@ -39,5 +40,6 @@ finally {
     [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services', $null, 'Process')
     [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services.ChunkExecutionLimiter', $null, 'Process')
     [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services.ChunkSorterFactory', $null, 'Process')
+    [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services.MergeSortingCoordinator', $null, 'Process')
     [System.Environment]::SetEnvironmentVariable('Logging__LogLevel__LargeFile.Sorter.Services.SorterApplication', $null, 'Process')
 }
