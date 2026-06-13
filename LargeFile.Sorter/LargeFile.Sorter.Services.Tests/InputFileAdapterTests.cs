@@ -50,6 +50,28 @@ public class InputFileAdapterTests
     }
 
     [Fact]
+    public void GetInputFileSizeBytes_ShouldReturnFileSize()
+    {
+        var tempFilePath = CreateTempFile("415. Apple\n");
+
+        try
+        {
+            IInputFileAdapter adapter = new InputFileAdapter(new InputFileConfig
+            {
+                FilePath = tempFilePath
+            }, NullLogger<InputFileAdapter>.Instance);
+
+            var fileSizeBytes = adapter.GetInputFileSizeBytes();
+
+            Assert.Equal(new FileInfo(tempFilePath).Length, fileSizeBytes);
+        }
+        finally
+        {
+            File.Delete(tempFilePath);
+        }
+    }
+
+    [Fact]
     public async Task DisposeAsync_ShouldDisposeOwnedReadStream()
     {
         var tempFilePath = CreateTempFile("415. Apple\n");

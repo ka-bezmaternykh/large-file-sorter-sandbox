@@ -44,6 +44,10 @@ public static class AppHost
             TempFilesFolder = options.TempFilesDir ?? DefaultTempFilesFolder,
             MergeFileTemplate = "merge-{0:D4}.tmp"
         });
+        builder.Services.AddSingleton(new ChunkingProgressConfig
+        {
+            ReportInterval = TimeSpan.FromSeconds(5)
+        });
         builder.Services.AddLargeFileSorterServices();
 
         return builder.Build();

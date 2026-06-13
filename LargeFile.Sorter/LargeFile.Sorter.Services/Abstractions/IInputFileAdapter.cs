@@ -14,4 +14,9 @@ public interface IInputFileAdapter : IAsyncDisposable
     /// Tries to open a readable stream for the input file without throwing for a missing file.
     /// </summary>
     bool TryOpenReadStream(out FileStream? stream);
+
+    /// <summary>
+    /// Gets the size of the input file in bytes, or <c>0</c> when the file does not exist.
+    /// </summary>
+    long GetInputFileSizeBytes();
 }

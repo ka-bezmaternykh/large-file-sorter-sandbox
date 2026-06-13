@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
             };
         });
         services.AddSingleton<IEnvironmentMonitor, EnvironmentMonitor>();
+        services.AddSingleton<IChunkingProgressReporter, ChunkingProgressReporter>();
         services.AddSingleton<IChunkExecutionLimiter, ChunkExecutionLimiter>();
         services.AddSingleton<IInputFileAdapter, InputFileAdapter>();
         services.AddTransient<IRowParser, RowParser>();

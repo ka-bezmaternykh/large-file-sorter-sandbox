@@ -42,6 +42,10 @@ public class ChunkSorterTests
             TempFilesFolder = tempDirectoryPath,
             TempFileTemplate = "chunk-{0:D4}.tmp"
         });
+        services.AddSingleton(new ChunkingProgressConfig
+        {
+            ReportInterval = TimeSpan.FromSeconds(5)
+        });
         services.AddLargeFileSorterServices();
         return services;
     }

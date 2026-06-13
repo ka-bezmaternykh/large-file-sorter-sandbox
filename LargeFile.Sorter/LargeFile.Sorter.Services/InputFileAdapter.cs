@@ -28,7 +28,7 @@ public sealed class InputFileAdapter : IInputFileAdapter
 
         if (!File.Exists(FilePath))
         {
-            _logger.LogWarning("Input file does not exist: {FilePath}", FilePath);
+            _logger.LogError("Input file does not exist: {FilePath}", FilePath);
             stream = null;
             return false;
         }
@@ -48,6 +48,15 @@ public sealed class InputFileAdapter : IInputFileAdapter
 
         stream = _readStream;
         return true;
+    }
+
+    public long GetInputFileSizeBytes()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        return File.Exists(FilePath)
+            ? new FileInfo(FilePath).Length
+            : 0;
     }
 
     public async ValueTask DisposeAsync()

@@ -108,6 +108,10 @@ public class MergeSorterTests
             TempFilesFolder = tempDirectoryPath,
             MergeFileTemplate = "merge-{0:D4}.tmp"
         });
+        services.AddSingleton(new ChunkingProgressConfig
+        {
+            ReportInterval = TimeSpan.FromSeconds(5)
+        });
         services.AddLargeFileSorterServices();
         return services.BuildServiceProvider();
     }

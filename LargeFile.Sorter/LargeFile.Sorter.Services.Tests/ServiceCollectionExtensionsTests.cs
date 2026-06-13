@@ -33,17 +33,25 @@ public class ServiceCollectionExtensionsTests
             TempFilesFolder = tempDirectoryPath,
             MergeFileTemplate = "merge-{0:D4}.tmp"
         });
+        services.AddSingleton(new ChunkingProgressConfig
+        {
+            ReportInterval = TimeSpan.FromSeconds(5)
+        });
         services.AddLargeFileSorterServices();
 
         await using var serviceProvider = services.BuildServiceProvider();
 
         var application = serviceProvider.GetRequiredService<ISorterApplication>();
         var adapter = serviceProvider.GetRequiredService<IInputFileAdapter>();
+        var chunkingProgressReporter = serviceProvider.GetRequiredService<IChunkingProgressReporter>();
+        var chunkingProgressConfig = serviceProvider.GetRequiredService<ChunkingProgressConfig>();
         var environmentMonitor = serviceProvider.GetRequiredService<IEnvironmentMonitor>();
         var chunkSorterFactory = serviceProvider.GetRequiredService<IChunkSorterFactory>();
         var itemFormatter = serviceProvider.GetRequiredService<IItemFormatter>();
 
         Assert.Equal(tempInputFilePath, adapter.FilePath);
+        Assert.NotNull(chunkingProgressReporter);
+        Assert.Equal(TimeSpan.FromSeconds(5), chunkingProgressConfig.ReportInterval);
         Assert.True(environmentMonitor.LevelOfParallelism > 0);
         Assert.Empty(chunkSorterFactory.ChunkFileAdapters);
         Assert.IsType<TextRowFormatter>(itemFormatter);

@@ -139,7 +139,15 @@ public class InputFileReaderTests
             },
             NullLogger<InputFileAdapter>.Instance);
 
-        return new InputFileReader(adapter, NullLogger<InputFileReader>.Instance);
+        return new InputFileReader(
+            adapter,
+            new ChunkingProgressReporter(
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<ChunkingProgressReporter>.Instance,
+                new ChunkingProgressConfig
+                {
+                    ReportInterval = TimeSpan.FromSeconds(5)
+                }),
+            NullLogger<InputFileReader>.Instance);
     }
 
     private static string CreateTempFile(string content)

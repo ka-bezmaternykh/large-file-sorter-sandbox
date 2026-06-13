@@ -9,6 +9,7 @@ namespace LargeFile.Sorter.Services;
 public sealed class ChunkSorterFactory : IChunkSorterFactory
 {
     private readonly ChunkConfig _chunkConfig;
+    private readonly IChunkingProgressReporter _chunkingProgressReporter;
     private readonly IChunkExecutionLimiter _chunkExecutionLimiter;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ChunkSorterFactory> _logger;
@@ -19,16 +20,19 @@ public sealed class ChunkSorterFactory : IChunkSorterFactory
 
     public ChunkSorterFactory(
         ChunkConfig chunkConfig,
+        IChunkingProgressReporter chunkingProgressReporter,
         IChunkExecutionLimiter chunkExecutionLimiter,
         IServiceProvider serviceProvider,
         ILogger<ChunkSorterFactory> logger)
     {
         ArgumentNullException.ThrowIfNull(chunkConfig);
+        ArgumentNullException.ThrowIfNull(chunkingProgressReporter);
         ArgumentNullException.ThrowIfNull(chunkExecutionLimiter);
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
         _chunkConfig = chunkConfig;
+        _chunkingProgressReporter = chunkingProgressReporter;
         _chunkExecutionLimiter = chunkExecutionLimiter;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -60,7 +64,9 @@ public sealed class ChunkSorterFactory : IChunkSorterFactory
                 _activeSorters.Add(processingTask);
             }
 
-            _logger.LogInformation("Created chunk sorter #{ChunkNumber} with file {FileName}.", chunkNumber, filePath);
+            _chunkingProgressReporter.ReportChunkCreated();
+            _chunkingProgressReporter.ReportSorterStarted();
+            _logger.LogDebug("Created chunk sorter #{ChunkNumber} with file {FileName}.", chunkNumber, filePath);
             return chunkSorter;
         }
         catch
@@ -92,12 +98,20 @@ public sealed class ChunkSorterFactory : IChunkSorterFactory
 
     private async Task TrackSorterAsync(ChunkSorter chunkSorter)
     {
+        var completedSuccessfully = false;
         try
         {
             await chunkSorter.StartSortingAsync();
+            completedSuccessfully = true;
         }
         finally
         {
+            if (completedSuccessfully)
+            {
+                _chunkingProgressReporter.ReportChunkCompleted();
+            }
+
+            _chunkingProgressReporter.ReportSorterFinished();
             await chunkSorter.DisposeAsync();
             _chunkExecutionLimiter.Release();
         }

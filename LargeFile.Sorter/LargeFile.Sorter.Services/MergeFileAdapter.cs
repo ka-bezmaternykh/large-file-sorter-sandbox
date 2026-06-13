@@ -32,7 +32,7 @@ public sealed class MergeFileAdapter : ITempFileAdapter
             throw new InvalidOperationException("Merge file read stream has already been opened.");
         }
 
-        _logger.LogInformation("Opening merge file stream for reading: {FilePath}", FilePath);
+        _logger.LogDebug("Opening merge file stream for reading: {FilePath}", FilePath);
 
         _readStream = new FileStream(
             path: FilePath,
@@ -57,17 +57,17 @@ public sealed class MergeFileAdapter : ITempFileAdapter
         var directoryPath = Path.GetDirectoryName(FilePath);
         if (!string.IsNullOrWhiteSpace(directoryPath))
         {
-            _logger.LogInformation("Ensuring directory exists for merge file: {DirectoryPath}", directoryPath);
+            _logger.LogDebug("Ensuring directory exists for merge file: {DirectoryPath}", directoryPath);
             Directory.CreateDirectory(directoryPath);
         }
 
         if (File.Exists(FilePath))
         {
-            _logger.LogWarning("Merge file already exists and will be replaced: {FilePath}", FilePath);
+            _logger.LogDebug("Merge file already exists and will be replaced: {FilePath}", FilePath);
             File.Delete(FilePath);
         }
 
-        _logger.LogInformation("Creating merge file stream: {FilePath}", FilePath);
+        _logger.LogDebug("Creating merge file stream: {FilePath}", FilePath);
 
         _writeStream = new FileStream(
             path: FilePath,
@@ -114,7 +114,7 @@ public sealed class MergeFileAdapter : ITempFileAdapter
 
         if (File.Exists(FilePath))
         {
-            _logger.LogInformation("Deleting merge file during adapter disposal: {FilePath}", FilePath);
+            _logger.LogDebug("Deleting merge file during adapter disposal: {FilePath}", FilePath);
             File.Delete(FilePath);
         }
 
