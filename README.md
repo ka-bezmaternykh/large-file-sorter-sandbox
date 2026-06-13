@@ -161,6 +161,7 @@ Launch scripts live in the root `Runners/` folder.
 The runner scripts were written in PowerShell because Windows was explicitly allowed by the assignment assumptions. At the same time, the overall application logic is not tied to Windows, and the published sorter and generator can also be executed from Linux with equivalent command-line arguments.
 
 The sorter runner scripts also set an **explicit managed memory cap** through the `DOTNET_GCHeapHardLimit` environment variable.
+After each runner finishes, it clears the environment variables it set for the current PowerShell process.
 
 ### Publish
 
