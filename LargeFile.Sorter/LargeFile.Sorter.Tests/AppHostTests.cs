@@ -24,6 +24,7 @@ public class AppHostTests
         var runOptions = host.Services.GetRequiredService<SorterRunOptions>();
         var chunkConfig = host.Services.GetRequiredService<ChunkConfig>();
         var mergeConfig = host.Services.GetRequiredService<MergeConfig>();
+        var chunkingProgressConfig = host.Services.GetRequiredService<ChunkingProgressConfig>();
 
         Assert.NotNull(application);
         Assert.Equal("input.txt", runOptions.FilePath);
@@ -35,5 +36,6 @@ public class AppHostTests
         Assert.Equal(64, mergeConfig.MaxChunkFilesPerMerge);
         Assert.Equal("temp-root", mergeConfig.TempFilesFolder);
         Assert.Equal("merge-{0:D4}.tmp", mergeConfig.MergeFileTemplate);
+        Assert.Equal(TimeSpan.FromSeconds(5), chunkingProgressConfig.ReportInterval);
     }
 }

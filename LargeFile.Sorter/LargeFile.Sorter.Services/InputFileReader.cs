@@ -10,17 +10,23 @@ public sealed class InputFileReader : IInputFileReader
     private const int MaxLineTailBytes = 1024;
 
     private readonly IInputFileAdapter _inputFileAdapter;
+    private readonly IChunkingProgressReporter _chunkingProgressReporter;
     private readonly ILogger<InputFileReader> _logger;
     private PipeReader? _pipeReader;
     private bool _disposed;
     private bool _isFullyRead;
 
-    public InputFileReader(IInputFileAdapter inputFileAdapter, ILogger<InputFileReader> logger)
+    public InputFileReader(
+        IInputFileAdapter inputFileAdapter,
+        IChunkingProgressReporter chunkingProgressReporter,
+        ILogger<InputFileReader> logger)
     {
         ArgumentNullException.ThrowIfNull(inputFileAdapter);
+        ArgumentNullException.ThrowIfNull(chunkingProgressReporter);
         ArgumentNullException.ThrowIfNull(logger);
 
         _inputFileAdapter = inputFileAdapter;
+        _chunkingProgressReporter = chunkingProgressReporter;
         _logger = logger;
     }
 
@@ -132,6 +138,7 @@ public sealed class InputFileReader : IInputFileReader
             totalWritten,
             chunkSize,
             _isFullyRead);
+        _chunkingProgressReporter.ReportBytesRead(totalWritten);
 
         await writer.CompleteAsync();
     }

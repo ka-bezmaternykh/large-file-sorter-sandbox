@@ -8,6 +8,8 @@ public sealed class SorterApplication : ISorterApplication
 {
     private readonly IEnvironmentMonitor _environmentMonitor;
     private readonly IChunkSorterFactory _chunkSorterFactory;
+    private readonly IChunkingProgressReporter _chunkingProgressReporter;
+    private readonly IInputFileAdapter _inputFileAdapter;
     private readonly IMergeSorter _mergeSorter;
     private readonly IInputFileReader _inputFileReader;
     private readonly ILogger<SorterApplication> _logger;
@@ -15,18 +17,24 @@ public sealed class SorterApplication : ISorterApplication
     public SorterApplication(
         IEnvironmentMonitor environmentMonitor,
         IChunkSorterFactory chunkSorterFactory,
+        IChunkingProgressReporter chunkingProgressReporter,
+        IInputFileAdapter inputFileAdapter,
         IMergeSorter mergeSorter,
         IInputFileReader inputFileReader,
         ILogger<SorterApplication> logger)
     {
         ArgumentNullException.ThrowIfNull(environmentMonitor);
         ArgumentNullException.ThrowIfNull(chunkSorterFactory);
+        ArgumentNullException.ThrowIfNull(chunkingProgressReporter);
+        ArgumentNullException.ThrowIfNull(inputFileAdapter);
         ArgumentNullException.ThrowIfNull(mergeSorter);
         ArgumentNullException.ThrowIfNull(inputFileReader);
         ArgumentNullException.ThrowIfNull(logger);
 
         _environmentMonitor = environmentMonitor;
         _chunkSorterFactory = chunkSorterFactory;
+        _chunkingProgressReporter = chunkingProgressReporter;
+        _inputFileAdapter = inputFileAdapter;
         _mergeSorter = mergeSorter;
         _inputFileReader = inputFileReader;
         _logger = logger;
@@ -40,7 +48,8 @@ public sealed class SorterApplication : ISorterApplication
         try
         {
             _environmentMonitor.WriteEnvironment();
-            _logger.LogInformation("Starting chunking pipeline from input file.");
+            _logger.LogDebug("Starting chunking pipeline from input file.");
+            _chunkingProgressReporter.Start(_inputFileAdapter.GetInputFileSizeBytes());
 
             while (await inputFileReader.HasNextAsync(cancellationToken))
             {
@@ -49,6 +58,8 @@ public sealed class SorterApplication : ISorterApplication
             }
 
             await _chunkSorterFactory.WaitAllAsync(cancellationToken);
+            await _chunkingProgressReporter.CompleteAsync();
+
             _logger.LogInformation("Chunk pipeline completed.");
 
             _logger.LogInformation("Starting merging pipeline.");
@@ -62,10 +73,13 @@ public sealed class SorterApplication : ISorterApplication
         }
         finally
         {
+            await _chunkingProgressReporter.CompleteAsync();
+
             var process = Process.GetCurrentProcess();
             _logger.LogInformation("Small set of memory metrics in the end");
             _logger.LogInformation("Peak working set: {PeakWorkingSetMb} MB", process.PeakWorkingSet64 / 1024 / 1024);
             _logger.LogInformation("Current working set: {CurrentWorkingSetMb} MB", process.WorkingSet64 / 1024 / 1024);
         }
     }
+
 }

@@ -128,6 +128,7 @@ Solutions will be assessed on:
 - Chunk records are represented as parsed `Item` objects that store the numeric part separately from the UTF-8 bytes of the text part. This avoids allocating a managed `string` per row and keeps in-memory sorting more memory-efficient.
 - Formatting is isolated behind `IItemFormatter`. The default implementation writes text rows, while a binary formatter contract is already reserved for future optimization without forcing changes into the sorting pipeline.
 - Chunk execution concurrency is intentionally gated by `IChunkExecutionLimiter`, which combines memory and CPU heuristics. This keeps the number of active chunk sorters bounded instead of letting the reader flood the machine with too many in-flight chunks.
+- Chunking progress reporting is isolated behind a dedicated `IChunkingProgressReporter`. This keeps progress aggregation separate from the reader and sorter orchestration logic and allows periodic progress logs to stay centralized and thread-safe.
 - Merge is implemented as a multi-pass batched k-way merge. Each pass merges at most `MergeConfig.MaxChunkFilesPerMerge` files into intermediate outputs until only one file remains. This avoids relying on opening an arbitrary number of files simultaneously.
 - The merge phase uses `PriorityQueue` as the in-memory structure for selecting the next smallest row across active temp files. This keeps the k-way merge logic simple, explicit, and efficient for batched merge passes.
 - The default value of `MergeConfig.MaxChunkFilesPerMerge` was chosen empirically as `64`. With the default chunk size of `128 MB`, a `100 GB` source file is expected to produce about `800` chunk files, and that fan-in allows the merge phase to finish in two passes.
@@ -146,6 +147,7 @@ Solutions will be assessed on:
 - Supports single-file promotion when only one sorted chunk remains.
 - Supports multi-pass merge batching using `MergeConfig.MaxChunkFilesPerMerge`, including cleanup of intermediate merge files between passes.
 - Uses pooled reusable formatting buffers during merge to reduce repeated temporary allocations.
+- Includes a dedicated progress reporter for the chunking phase with periodic aggregated logging.
 - Logs environment information, chunk execution limits, and final memory metrics through the application logger.
 - Includes unit and integration-style tests for command-line parsing, host wiring, input reading, chunk sorting, temp-file lifecycle, merge behavior, and end-to-end application flow.
 

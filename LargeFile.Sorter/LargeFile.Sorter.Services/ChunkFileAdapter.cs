@@ -66,17 +66,17 @@ public sealed class ChunkFileAdapter : ITempFileAdapter
         var directoryPath = Path.GetDirectoryName(FilePath);
         if (!string.IsNullOrWhiteSpace(directoryPath))
         {
-            _logger.LogInformation("Ensuring directory exists for chunk file: {DirectoryPath}", directoryPath);
+            _logger.LogDebug("Ensuring directory exists for chunk file: {DirectoryPath}", directoryPath);
             Directory.CreateDirectory(directoryPath);
         }
 
         if (File.Exists(FilePath))
         {
-            _logger.LogWarning("Chunk file already exists and will be replaced: {FilePath}", FilePath);
+            _logger.LogDebug("Chunk file already exists and will be replaced: {FilePath}", FilePath);
             File.Delete(FilePath);
         }
 
-        _logger.LogInformation("Creating chunk file stream: {FilePath}", FilePath);
+        _logger.LogDebug("Creating chunk file stream: {FilePath}", FilePath);
 
         _writeStream = new FileStream(
             path: FilePath,
@@ -125,7 +125,7 @@ public sealed class ChunkFileAdapter : ITempFileAdapter
 
         if (File.Exists(FilePath))
         {
-            _logger.LogInformation("Deleting chunk file during adapter disposal: {FilePath}", FilePath);
+            _logger.LogDebug("Deleting chunk file during adapter disposal: {FilePath}", FilePath);
             File.Delete(FilePath);
         }
 
