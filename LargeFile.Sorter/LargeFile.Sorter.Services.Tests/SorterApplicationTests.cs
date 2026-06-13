@@ -112,6 +112,7 @@ public class SorterApplicationTests
         services.AddSingleton(new MergeConfig
         {
             MaxChunkFilesPerMerge = 64,
+            MaxConcurrentMergeBatches = 4,
             TempFilesFolder = tempDirectoryPath,
             MergeFileTemplate = "merge-{0:D4}.tmp"
         });

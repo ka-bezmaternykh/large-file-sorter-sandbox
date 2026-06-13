@@ -30,6 +30,7 @@ public class ServiceCollectionExtensionsTests
         services.AddSingleton(new MergeConfig
         {
             MaxChunkFilesPerMerge = 64,
+            MaxConcurrentMergeBatches = 4,
             TempFilesFolder = tempDirectoryPath,
             MergeFileTemplate = "merge-{0:D4}.tmp"
         });
@@ -47,6 +48,8 @@ public class ServiceCollectionExtensionsTests
         var chunkingProgressConfig = serviceProvider.GetRequiredService<ChunkingProgressConfig>();
         var environmentMonitor = serviceProvider.GetRequiredService<IEnvironmentMonitor>();
         var chunkSorterFactory = serviceProvider.GetRequiredService<IChunkSorterFactory>();
+        var mergeSortingCoordinator = serviceProvider.GetRequiredService<IMergeSortingCoordinator>();
+        var mergeExecutionLimiter = serviceProvider.GetRequiredService<IMergeExecutionLimiter>();
         var itemFormatter = serviceProvider.GetRequiredService<IItemFormatter>();
 
         Assert.Equal(tempInputFilePath, adapter.FilePath);
@@ -54,6 +57,8 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(TimeSpan.FromSeconds(5), chunkingProgressConfig.ReportInterval);
         Assert.True(environmentMonitor.LevelOfParallelism > 0);
         Assert.Empty(chunkSorterFactory.ChunkFileAdapters);
+        Assert.NotNull(mergeSortingCoordinator);
+        Assert.True(mergeExecutionLimiter.MaxConcurrentBatches > 0);
         Assert.IsType<TextRowFormatter>(itemFormatter);
 
         await application.RunAsync();

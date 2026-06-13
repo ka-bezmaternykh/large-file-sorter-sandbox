@@ -130,6 +130,7 @@ Solutions will be assessed on:
 - Chunk execution concurrency is intentionally gated by `IChunkExecutionLimiter`, which combines memory and CPU heuristics. This keeps the number of active chunk sorters bounded instead of letting the reader flood the machine with too many in-flight chunks.
 - Chunking progress reporting is isolated behind a dedicated `IChunkingProgressReporter`. This keeps progress aggregation separate from the reader and sorter orchestration logic and allows periodic progress logs to stay centralized and thread-safe.
 - Merge is implemented as a multi-pass batched k-way merge. Each pass merges at most `MergeConfig.MaxChunkFilesPerMerge` files into intermediate outputs until only one file remains. This avoids relying on opening an arbitrary number of files simultaneously.
+- Merge batch execution is parallelized at the batch level through a dedicated coordinator and execution limiter. This allows independent merge batches from the same pass to run concurrently without parallelizing the inner `PriorityQueue` merge loop itself.
 - The merge phase uses `PriorityQueue` as the in-memory structure for selecting the next smallest row across active temp files. This keeps the k-way merge logic simple, explicit, and efficient for batched merge passes.
 - The default value of `MergeConfig.MaxChunkFilesPerMerge` was chosen empirically as `64`. With the default chunk size of `128 MB`, a `100 GB` source file is expected to produce about `800` chunk files, and that fan-in allows the merge phase to finish in two passes.
 
@@ -146,6 +147,7 @@ Solutions will be assessed on:
 - Uses explicit temp-file ownership so chunk and merge file streams are opened, completed, and disposed by their adapters.
 - Supports single-file promotion when only one sorted chunk remains.
 - Supports multi-pass merge batching using `MergeConfig.MaxChunkFilesPerMerge`, including cleanup of intermediate merge files between passes.
+- Supports parallel batch merging within a merge pass while keeping each individual k-way merge batch sequential and deterministic.
 - Uses pooled reusable formatting buffers during merge to reduce repeated temporary allocations.
 - Includes a dedicated progress reporter for the chunking phase with periodic aggregated logging.
 - Logs environment information, chunk execution limits, and final memory metrics through the application logger.
@@ -154,7 +156,6 @@ Solutions will be assessed on:
 ### Large File Sorter TODO
 
 - Add proper progress logging
-- Add parallel processing for merge batches
 
 ## Runners
 
