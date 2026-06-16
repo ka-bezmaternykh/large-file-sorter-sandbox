@@ -150,12 +150,14 @@ Solutions will be assessed on:
 - Supports parallel batch merging within a merge pass while keeping each individual k-way merge batch sequential and deterministic.
 - Uses pooled reusable formatting buffers during merge to reduce repeated temporary allocations.
 - Includes a dedicated progress reporter for the chunking phase with periodic aggregated logging.
+- Includes dedicated periodic progress reporting for both chunking and merge phases, including batch-level merge write progress.
 - Logs environment information, chunk execution limits, and final memory metrics through the application logger.
 - Includes unit and integration-style tests for command-line parsing, host wiring, input reading, chunk sorting, temp-file lifecycle, merge behavior, and end-to-end application flow.
 
 ### Large File Sorter TODO
 
-- Add proper progress logging
+- Add dynamic loading balancing
+- Add binary sorting 
 
 ## Runners
 
