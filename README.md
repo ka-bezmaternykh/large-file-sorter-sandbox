@@ -195,6 +195,13 @@ After each runner finishes, it clears the environment variables it set for the c
 - `file-sorter-run-10gb.ps1` reads `LargeFiles/unsorted-10gb.txt` and writes `LargeFiles/sorted-10gb.txt`
 - `file-sorter-run-100gb.ps1` reads `LargeFiles/unsorted-100gb.txt` and writes `LargeFiles/sorted-100gb.txt`
 
+### Performance Testing
+
+- `PerformanceTesting/file-sorter-run-10gb-with-counters.ps1` runs the released sorter executable.
+- It shows the application logs and counter output in the console.
+- It writes application stdout and stderr to `PerformanceTesting/logs/`.
+- It writes counters output to `PerformanceTesting/file-sorter-run-10gb-metrics.log`.
+
 ### Example Scenario: 10 GB
 
 1. Run `file-generator-release.ps1` to publish the generator into `DummyFile.Generator/Release`.
@@ -213,25 +220,3 @@ This gives you one complete large-file flow from generation to sorting with matc
 
 This is the full high-volume scenario targeted by the assignment and uses the same runner layout as the smaller examples.
 
-## Performance testing
-
-Performance testing was performed with both internal and external tools.
-
-### Internal tools
-
-- `Process` memory metrics such as `WorkingSet64` were used to observe current and peak working set values during execution.
-- `Stopwatch` was used to measure the total execution time of selected generation and sorting scenarios.
-
-### External tools
-
-- `dotnet-counters` was used to inspect runtime counters and observe process behavior under load.
-- `JetBrains dotMemory` was used for memory profiling and allocation analysis.
-
-### TODO
-
-- Add scripts for running `dotnet-counters` and logging the captured results.
-- Add `BenchmarkDotNet` benchmarks to optimize hot paths inside both applications.
-
-## Disclaimer
-
-During the work on this assignment, one senior engineer, several Codex agents, and a fair amount of Russian profanity were observed. No agents were harmed in the process.
