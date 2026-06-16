@@ -1,16 +1,12 @@
 namespace LargeFile.Sorter.Services.Abstractions;
 
 /// <summary>
-/// Performs a single k-way merge for one batch of temporary sorted files.
+/// Represents one dedicated merge worker responsible for processing a single batch of temp files.
 /// </summary>
-public interface IMergeBatchProcessor
+public interface IMergeBatchProcessor : IAsyncDisposable
 {
     /// <summary>
-    /// Merges one batch of sorted temporary files into a single temporary output file.
+    /// Starts merging the assigned batch into a single temp output file.
     /// </summary>
-    Task<ITempFileAdapter> MergeBatchAsync(
-        IReadOnlyList<ITempFileAdapter> batchFiles,
-        int passNumber,
-        int batchNumber,
-        CancellationToken cancellationToken = default);
+    Task<ITempFileAdapter> StartMergingAsync(CancellationToken cancellationToken = default);
 }

@@ -1,90 +1,125 @@
 using System.Buffers;
-using System.Globalization;
 using LargeFile.Sorter.Services.Abstractions;
 using LargeFile.Sorter.Services.Models;
-using LargeFile.Sorter.Services.Options;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace LargeFile.Sorter.Services;
 
 public sealed class MergeBatchProcessor : IMergeBatchProcessor
 {
-    private readonly MergeConfig _mergeConfig;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IReadOnlyList<ITempFileAdapter> _batchFiles;
+    private readonly ITempFileAdapter? _mergeFileAdapter;
+    private readonly ITempFileWriter? _mergeFileWriter;
+    private readonly ITempFileReader[] _readers;
+    private readonly IMergeBatchProgressReporter _mergeBatchProgressReporter;
     private readonly IComparer<Item> _itemComparer;
     private readonly IItemFormatter _itemFormatter;
-    private readonly IMergeBatchProgressReporterFactory _mergeBatchProgressReporterFactory;
     private readonly ILogger<MergeBatchProcessor> _logger;
-    private int _nextMergeNumber;
+    private bool _started;
+    private bool _disposed;
 
     public MergeBatchProcessor(
-        MergeConfig mergeConfig,
-        IServiceProvider serviceProvider,
+        IReadOnlyList<ITempFileAdapter> batchFiles,
+        ITempFileAdapter? mergeFileAdapter,
+        ITempFileWriter? mergeFileWriter,
+        ITempFileReader[] readers,
+        IMergeBatchProgressReporter mergeBatchProgressReporter,
         IComparer<Item> itemComparer,
         IItemFormatter itemFormatter,
-        IMergeBatchProgressReporterFactory mergeBatchProgressReporterFactory,
         ILogger<MergeBatchProcessor> logger)
     {
-        ArgumentNullException.ThrowIfNull(mergeConfig);
-        ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(batchFiles);
+        ArgumentNullException.ThrowIfNull(readers);
+        ArgumentNullException.ThrowIfNull(mergeBatchProgressReporter);
         ArgumentNullException.ThrowIfNull(itemComparer);
         ArgumentNullException.ThrowIfNull(itemFormatter);
-        ArgumentNullException.ThrowIfNull(mergeBatchProgressReporterFactory);
         ArgumentNullException.ThrowIfNull(logger);
 
-        _mergeConfig = mergeConfig;
-        _serviceProvider = serviceProvider;
+        _batchFiles = batchFiles;
+        _mergeFileAdapter = mergeFileAdapter;
+        _mergeFileWriter = mergeFileWriter;
+        _readers = readers;
+        _mergeBatchProgressReporter = mergeBatchProgressReporter;
         _itemComparer = itemComparer;
         _itemFormatter = itemFormatter;
-        _mergeBatchProgressReporterFactory = mergeBatchProgressReporterFactory;
         _logger = logger;
     }
 
-    public async Task<ITempFileAdapter> MergeBatchAsync(
-        IReadOnlyList<ITempFileAdapter> batchFiles,
-        int passNumber,
-        int batchNumber,
-        CancellationToken cancellationToken = default)
+    public async Task<ITempFileAdapter> StartMergingAsync(CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(batchFiles);
-
-        if (batchFiles.Count == 0)
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_started)
         {
-            throw new InvalidOperationException("Merge batch cannot be empty.");
+            throw new InvalidOperationException("Merge batch processing has already been started.");
         }
 
-        if (batchFiles.Count == 1)
-        {
-            return batchFiles[0];
-        }
-
-        _logger.LogInformation("Merging batch of {BatchFileCount} temp files.", batchFiles.Count);
-        var totalInputBytes = batchFiles.Sum(batchFile => batchFile.GetFileSizeBytes());
-        var mergeFilePath = CreateMergeFilePath();
-        var mergeFileAdapter = ActivatorUtilities.CreateInstance<MergeFileAdapter>(
-            _serviceProvider,
-            new MergeFileConfig
-            {
-                FilePath = mergeFilePath
-            });
-        var mergeBatchProgressReporter = _mergeBatchProgressReporterFactory.Create(passNumber, batchNumber, batchFiles.Count, totalInputBytes);
-
-        var readers = new Dictionary<int, ITempFileReader>(batchFiles.Count);
+        _started = true;
         var completedSuccessfully = false;
 
         try
         {
-            await using var mergeFileWriter = ActivatorUtilities.CreateInstance<MergeFileWriter>(_serviceProvider, mergeFileAdapter);
-            for (var index = 0; index < batchFiles.Count; index++)
-            {
-                readers[index] = ActivatorUtilities.CreateInstance<ChunkFileReader>(_serviceProvider, batchFiles[index]);
-            }
+            var mergeFileAdapter = await MergeAsync(cancellationToken);
+            completedSuccessfully = true;
+            return mergeFileAdapter;
+        }
+        finally
+        {
+            await DisposeAsync();
 
+            if (!completedSuccessfully && _mergeFileAdapter is not null)
+            {
+                await _mergeFileAdapter.DisposeAsync();
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (_mergeFileWriter is not null)
+        {
+            await _mergeFileWriter.DisposeAsync();
+        }
+
+        foreach (var reader in _readers)
+        {
+            await reader.DisposeAsync();
+        }
+
+        _disposed = true;
+    }
+
+    private async Task<ITempFileAdapter> MergeAsync(CancellationToken cancellationToken)
+    {
+        if (_batchFiles.Count == 0)
+        {
+            throw new InvalidOperationException("Merge batch cannot be empty.");
+        }
+
+        if (_batchFiles.Count == 1)
+        {
+            return _batchFiles[0];
+        }
+
+        if (_mergeFileAdapter is null || _mergeFileWriter is null)
+        {
+            throw new InvalidOperationException("Merge output resources were not created for a multi-file batch.");
+        }
+
+        _logger.LogInformation("Merging batch of {BatchFileCount} temp files.", _batchFiles.Count);
+        var completedSuccessfully = false;
+
+        try
+        {
             var priorityQueue = new PriorityQueue<MergeEntry, Item>(_itemComparer);
 
-            foreach (var (readerIndex, reader) in readers)
+            for (var readerIndex = 0; readerIndex < _readers.Length; readerIndex++)
             {
+                var reader = _readers[readerIndex];
                 var item = await reader.ReadNextAsync(cancellationToken);
                 if (item.HasValue)
                 {
@@ -98,16 +133,16 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
                 while (priorityQueue.TryDequeue(out var mergeEntry, out _))
                 {
                     EnsureFormatBufferCapacity(ref formatBuffer, mergeEntry.Item.TextBytes.Length + 32);
-                    await WriteItemAsync(mergeEntry.Item, mergeFileWriter, formatBuffer, mergeBatchProgressReporter, cancellationToken);
+                    await WriteItemAsync(mergeEntry.Item, _mergeFileWriter, formatBuffer, _mergeBatchProgressReporter, cancellationToken);
 
-                    var nextItem = await readers[mergeEntry.SourceChunkNumber].ReadNextAsync(cancellationToken);
+                    var nextItem = await _readers[mergeEntry.SourceChunkNumber].ReadNextAsync(cancellationToken);
                     if (nextItem.HasValue)
                     {
                         priorityQueue.Enqueue(mergeEntry with { Item = nextItem.Value }, nextItem.Value);
                     }
                 }
 
-                await mergeFileWriter.FlushAsync(cancellationToken);
+                await _mergeFileWriter.FlushAsync(cancellationToken);
             }
             finally
             {
@@ -118,16 +153,11 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
         }
         finally
         {
-            foreach (var reader in readers.Values)
-            {
-                await reader.DisposeAsync();
-            }
-
-            await mergeBatchProgressReporter.CompleteAsync(completedSuccessfully);
+            await _mergeBatchProgressReporter.CompleteAsync(completedSuccessfully);
         }
 
-        await DisposeTempFileAdaptersAsync(batchFiles);
-        return mergeFileAdapter;
+        await DisposeTempFileAdaptersAsync(_batchFiles);
+        return _mergeFileAdapter;
     }
 
     private async Task WriteItemAsync(
@@ -157,13 +187,6 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
         var resizedBuffer = ArrayPool<byte>.Shared.Rent(requiredLength);
         ArrayPool<byte>.Shared.Return(buffer);
         buffer = resizedBuffer;
-    }
-
-    private string CreateMergeFilePath()
-    {
-        var mergeNumber = Interlocked.Increment(ref _nextMergeNumber);
-        var fileName = string.Format(CultureInfo.InvariantCulture, _mergeConfig.MergeFileTemplate, mergeNumber);
-        return Path.Combine(_mergeConfig.TempFilesFolder, fileName);
     }
 
     private static async Task DisposeTempFileAdaptersAsync(IEnumerable<ITempFileAdapter> tempFileAdapters)

@@ -58,6 +58,7 @@ public class ServiceCollectionExtensionsTests
         var mergeSortingCoordinator = serviceProvider.GetRequiredService<IMergeSortingCoordinator>();
         var mergeExecutionLimiter = serviceProvider.GetRequiredService<IMergeExecutionLimiter>();
         var mergeBatchProgressReporterFactory = serviceProvider.GetRequiredService<IMergeBatchProgressReporterFactory>();
+        var mergeBatchProcessorFactory = serviceProvider.GetRequiredService<IMergeBatchProcessorFactory>();
         var itemFormatter = serviceProvider.GetRequiredService<IItemFormatter>();
 
         Assert.Equal(tempInputFilePath, adapter.FilePath);
@@ -71,6 +72,7 @@ public class ServiceCollectionExtensionsTests
         Assert.NotNull(mergeSortingCoordinator);
         Assert.True(mergeExecutionLimiter.MaxConcurrentBatches > 0);
         Assert.NotNull(mergeBatchProgressReporterFactory);
+        Assert.NotNull(mergeBatchProcessorFactory);
         Assert.IsType<TextRowFormatter>(itemFormatter);
 
         await application.RunAsync();
