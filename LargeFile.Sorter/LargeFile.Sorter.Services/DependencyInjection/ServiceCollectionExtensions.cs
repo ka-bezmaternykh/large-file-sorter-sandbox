@@ -24,11 +24,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IChunkExecutionLimiter, ChunkExecutionLimiter>();
         services.AddSingleton<IMergeExecutionLimiter, MergeExecutionLimiter>();
         services.AddSingleton<IMergeBatchProgressReporterFactory, MergeBatchProgressReporterFactory>();
+        services.AddSingleton<IMergeBatchProcessorFactory, MergeBatchProcessorFactory>();
         services.AddSingleton<IInputFileAdapter, InputFileAdapter>();
         services.AddTransient<IRowParser, RowParser>();
         services.AddTransient<IComparer<Models.Item>, ItemComparer>();
         services.AddTransient<IItemFormatter, TextRowFormatter>();
-        services.AddSingleton<IMergeBatchProcessor, MergeBatchProcessor>();
         services.AddSingleton<IMergeSortingCoordinator, MergeSortingCoordinator>();
         // TODO Binary file optimization
         //services.AddSingleton<BinaryRowFormatter>();

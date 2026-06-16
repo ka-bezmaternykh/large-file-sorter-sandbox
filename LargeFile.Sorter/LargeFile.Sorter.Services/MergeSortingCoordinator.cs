@@ -8,7 +8,7 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
 {
     private readonly MergeConfig _mergeConfig;
     private readonly SorterRunOptions _sorterRunOptions;
-    private readonly IMergeBatchProcessor _mergeBatchProcessor;
+    private readonly IMergeBatchProcessorFactory _mergeBatchProcessorFactory;
     private readonly IMergeExecutionLimiter _mergeExecutionLimiter;
     private readonly IMergeProgressReporter _mergeProgressReporter;
     private readonly ILogger<MergeSortingCoordinator> _logger;
@@ -22,21 +22,21 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
     public MergeSortingCoordinator(
         MergeConfig mergeConfig,
         SorterRunOptions sorterRunOptions,
-        IMergeBatchProcessor mergeBatchProcessor,
+        IMergeBatchProcessorFactory mergeBatchProcessorFactory,
         IMergeExecutionLimiter mergeExecutionLimiter,
         IMergeProgressReporter mergeProgressReporter,
         ILogger<MergeSortingCoordinator> logger)
     {
         ArgumentNullException.ThrowIfNull(mergeConfig);
         ArgumentNullException.ThrowIfNull(sorterRunOptions);
-        ArgumentNullException.ThrowIfNull(mergeBatchProcessor);
+        ArgumentNullException.ThrowIfNull(mergeBatchProcessorFactory);
         ArgumentNullException.ThrowIfNull(mergeExecutionLimiter);
         ArgumentNullException.ThrowIfNull(mergeProgressReporter);
         ArgumentNullException.ThrowIfNull(logger);
 
         _mergeConfig = mergeConfig;
         _sorterRunOptions = sorterRunOptions;
-        _mergeBatchProcessor = mergeBatchProcessor;
+        _mergeBatchProcessorFactory = mergeBatchProcessorFactory;
         _mergeExecutionLimiter = mergeExecutionLimiter;
         _mergeProgressReporter = mergeProgressReporter;
         _logger = logger;
@@ -109,8 +109,9 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
         await _mergeExecutionLimiter.WaitAsync(cancellationToken);
         try
         {
+            var mergeBatchProcessor = _mergeBatchProcessorFactory.Create(batch, currentPassNumber, batchNumber);
             _mergeProgressReporter.ReportBatchScheduled();
-            var batchTask = ProcessBatchAsync(batch, currentPassNumber, batchNumber, cancellationToken);
+            var batchTask = ProcessBatchAsync(mergeBatchProcessor, currentPassNumber, batchNumber, batch.Count, cancellationToken);
             _activeBatchTasks.Add(batchTask);
         }
         catch
@@ -176,9 +177,10 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
     }
 
     private async Task<ITempFileAdapter> ProcessBatchAsync(
-        IReadOnlyList<ITempFileAdapter> batch,
+        IMergeBatchProcessor mergeBatchProcessor,
         int passNumber,
         int batchNumber,
+        int batchFileCount,
         CancellationToken cancellationToken)
     {
         try
@@ -187,9 +189,9 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
                 "Starting merge batch {BatchNumber} for pass {PassNumber} with {BatchFileCount} temp files.",
                 batchNumber,
                 passNumber,
-                batch.Count);
+                batchFileCount);
 
-            var result = await _mergeBatchProcessor.MergeBatchAsync(batch, passNumber, batchNumber, cancellationToken);
+            var result = await mergeBatchProcessor.StartMergingAsync(cancellationToken);
             _mergeProgressReporter.ReportBatchCompleted();
             return result;
         }
