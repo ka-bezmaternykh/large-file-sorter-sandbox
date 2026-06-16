@@ -20,8 +20,10 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<IEnvironmentMonitor, EnvironmentMonitor>();
         services.AddSingleton<IChunkingProgressReporter, ChunkingProgressReporter>();
+        services.AddSingleton<IMergeProgressReporter, MergeProgressReporter>();
         services.AddSingleton<IChunkExecutionLimiter, ChunkExecutionLimiter>();
         services.AddSingleton<IMergeExecutionLimiter, MergeExecutionLimiter>();
+        services.AddSingleton<IMergeBatchProgressReporterFactory, MergeBatchProgressReporterFactory>();
         services.AddSingleton<IInputFileAdapter, InputFileAdapter>();
         services.AddTransient<IRowParser, RowParser>();
         services.AddTransient<IComparer<Models.Item>, ItemComparer>();

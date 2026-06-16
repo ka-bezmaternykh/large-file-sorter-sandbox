@@ -8,5 +8,9 @@ public interface IMergeBatchProcessor
     /// <summary>
     /// Merges one batch of sorted temporary files into a single temporary output file.
     /// </summary>
-    Task<ITempFileAdapter> MergeBatchAsync(IReadOnlyList<ITempFileAdapter> batchFiles, CancellationToken cancellationToken = default);
+    Task<ITempFileAdapter> MergeBatchAsync(
+        IReadOnlyList<ITempFileAdapter> batchFiles,
+        int passNumber,
+        int batchNumber,
+        CancellationToken cancellationToken = default);
 }

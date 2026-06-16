@@ -24,6 +24,16 @@ public sealed class ChunkFileAdapter : ITempFileAdapter
 
     public string FilePath { get; }
 
+    public long GetFileSizeBytes()
+    {
+        if (!File.Exists(FilePath))
+        {
+            return 0;
+        }
+
+        return new FileInfo(FilePath).Length;
+    }
+
     public FileStream OpenReadStream()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -37,7 +47,7 @@ public sealed class ChunkFileAdapter : ITempFileAdapter
             throw new InvalidOperationException("Chunk file read stream has already been opened.");
         }
 
-        _logger.LogInformation("Opening chunk file stream for reading: {FilePath}", FilePath);
+        _logger.LogDebug("Opening chunk file stream for reading: {FilePath}", FilePath);
 
         _readStream = new FileStream(
             path: FilePath,

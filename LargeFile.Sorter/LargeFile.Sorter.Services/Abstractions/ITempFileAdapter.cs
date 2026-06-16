@@ -11,6 +11,11 @@ public interface ITempFileAdapter : IAsyncDisposable
     string FilePath { get; }
 
     /// <summary>
+    /// Gets the current size of the temporary file in bytes.
+    /// </summary>
+    long GetFileSizeBytes();
+
+    /// <summary>
     /// Opens a readable stream for the temporary file.
     /// </summary>
     FileStream OpenReadStream();

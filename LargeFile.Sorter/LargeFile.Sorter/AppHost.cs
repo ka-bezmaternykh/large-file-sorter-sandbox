@@ -49,6 +49,11 @@ public static class AppHost
         {
             ReportInterval = TimeSpan.FromSeconds(5)
         });
+        builder.Services.AddSingleton(new MergeProgressConfig
+        {
+            ReportInterval = TimeSpan.FromSeconds(5),
+            BatchReportInterval = TimeSpan.FromSeconds(5)
+        });
         builder.Services.AddLargeFileSorterServices();
 
         return builder.Build();

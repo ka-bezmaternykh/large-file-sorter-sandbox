@@ -10,10 +10,12 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
     private readonly SorterRunOptions _sorterRunOptions;
     private readonly IMergeBatchProcessor _mergeBatchProcessor;
     private readonly IMergeExecutionLimiter _mergeExecutionLimiter;
+    private readonly IMergeProgressReporter _mergeProgressReporter;
     private readonly ILogger<MergeSortingCoordinator> _logger;
     private readonly Queue<IReadOnlyList<ITempFileAdapter>> _pendingBatches = [];
     private readonly List<Task<ITempFileAdapter>> _activeBatchTasks = [];
     private List<ITempFileAdapter> _currentPassFiles = [];
+    private int _nextBatchNumber;
     private int _passNumber;
     private bool _started;
 
@@ -22,18 +24,21 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
         SorterRunOptions sorterRunOptions,
         IMergeBatchProcessor mergeBatchProcessor,
         IMergeExecutionLimiter mergeExecutionLimiter,
+        IMergeProgressReporter mergeProgressReporter,
         ILogger<MergeSortingCoordinator> logger)
     {
         ArgumentNullException.ThrowIfNull(mergeConfig);
         ArgumentNullException.ThrowIfNull(sorterRunOptions);
         ArgumentNullException.ThrowIfNull(mergeBatchProcessor);
         ArgumentNullException.ThrowIfNull(mergeExecutionLimiter);
+        ArgumentNullException.ThrowIfNull(mergeProgressReporter);
         ArgumentNullException.ThrowIfNull(logger);
 
         _mergeConfig = mergeConfig;
         _sorterRunOptions = sorterRunOptions;
         _mergeBatchProcessor = mergeBatchProcessor;
         _mergeExecutionLimiter = mergeExecutionLimiter;
+        _mergeProgressReporter = mergeProgressReporter;
         _logger = logger;
     }
 
@@ -62,15 +67,19 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
             _mergeConfig.MaxChunkFilesPerMerge);
 
         _started = true;
+        _nextBatchNumber = 0;
         _passNumber = 1;
         _currentPassFiles = initialFiles
             .OrderBy(pair => pair.Key)
             .Select(pair => pair.Value)
             .ToList();
 
+        _mergeProgressReporter.Start(_currentPassFiles.Count, _mergeConfig.MaxChunkFilesPerMerge);
+
         if (_currentPassFiles.Count > 1)
         {
             EnqueueBatches(_currentPassFiles);
+            _mergeProgressReporter.ReportPassStarted(_passNumber, _currentPassFiles.Count, _pendingBatches.Count);
         }
 
         _logger.LogDebug(
@@ -88,9 +97,11 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
 
         var batch = _pendingBatches.Dequeue();
         var currentPassNumber = _passNumber;
+        var batchNumber = ++_nextBatchNumber;
 
         _logger.LogDebug(
-            "Scheduling merge batch for pass {PassNumber}. Batch size: {BatchFileCount}. Pending batches left: {PendingBatchCount}.",
+            "Scheduling merge batch {BatchNumber} for pass {PassNumber}. Batch size: {BatchFileCount}. Pending batches left: {PendingBatchCount}.",
+            batchNumber,
             currentPassNumber,
             batch.Count,
             _pendingBatches.Count);
@@ -98,7 +109,8 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
         await _mergeExecutionLimiter.WaitAsync(cancellationToken);
         try
         {
-            var batchTask = ProcessBatchAsync(batch, currentPassNumber, cancellationToken);
+            _mergeProgressReporter.ReportBatchScheduled();
+            var batchTask = ProcessBatchAsync(batch, currentPassNumber, batchNumber, cancellationToken);
             _activeBatchTasks.Add(batchTask);
         }
         catch
@@ -127,10 +139,13 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
         var nextPassFiles = await Task.WhenAll(activeBatchTasks).WaitAsync(cancellationToken);
 
         _currentPassFiles = [.. nextPassFiles];
+        _mergeProgressReporter.ReportPassCompleted(completedPassNumber, nextPassFiles.Length);
+
         if (_currentPassFiles.Count > 1)
         {
             _passNumber++;
             EnqueueBatches(_currentPassFiles);
+            _mergeProgressReporter.ReportPassStarted(_passNumber, _currentPassFiles.Count, _pendingBatches.Count);
         }
 
         _logger.LogDebug(
@@ -156,22 +171,32 @@ public sealed class MergeSortingCoordinator : IMergeSortingCoordinator
         var finalFile = _currentPassFiles[0];
         _logger.LogDebug("Promoting final merged temp file to output: {TempFilePath}", finalFile.FilePath);
         PromoteFileToOutput(finalFile.FilePath);
+        _mergeProgressReporter.ReportFinalPromoted();
         await finalFile.DisposeAsync();
     }
 
     private async Task<ITempFileAdapter> ProcessBatchAsync(
         IReadOnlyList<ITempFileAdapter> batch,
         int passNumber,
+        int batchNumber,
         CancellationToken cancellationToken)
     {
         try
         {
             _logger.LogDebug(
-                "Starting merge batch for pass {PassNumber} with {BatchFileCount} temp files.",
+                "Starting merge batch {BatchNumber} for pass {PassNumber} with {BatchFileCount} temp files.",
+                batchNumber,
                 passNumber,
                 batch.Count);
 
-            return await _mergeBatchProcessor.MergeBatchAsync(batch, cancellationToken);
+            var result = await _mergeBatchProcessor.MergeBatchAsync(batch, passNumber, batchNumber, cancellationToken);
+            _mergeProgressReporter.ReportBatchCompleted();
+            return result;
+        }
+        catch
+        {
+            _mergeProgressReporter.ReportBatchFailed();
+            throw;
         }
         finally
         {

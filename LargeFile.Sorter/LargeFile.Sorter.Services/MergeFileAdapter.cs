@@ -23,6 +23,16 @@ public sealed class MergeFileAdapter : ITempFileAdapter
 
     public string FilePath { get; }
 
+    public long GetFileSizeBytes()
+    {
+        if (!File.Exists(FilePath))
+        {
+            return 0;
+        }
+
+        return new FileInfo(FilePath).Length;
+    }
+
     public FileStream OpenReadStream()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);

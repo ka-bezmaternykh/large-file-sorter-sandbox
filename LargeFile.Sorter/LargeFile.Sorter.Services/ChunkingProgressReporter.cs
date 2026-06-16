@@ -113,13 +113,7 @@ public sealed class ChunkingProgressReporter : IChunkingProgressReporter
         cancellationTokenSource?.Cancel();
         if (reportingTask is not null)
         {
-            try
-            {
-                await reportingTask;
-            }
-            catch (OperationCanceledException)
-            {
-            }
+            await reportingTask;
         }
 
         _stopwatch.Stop();
@@ -130,11 +124,18 @@ public sealed class ChunkingProgressReporter : IChunkingProgressReporter
 
     private async Task RunReportingLoopAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(_reportInterval);
-
-        while (await timer.WaitForNextTickAsync(cancellationToken))
+        try
         {
-            LogSnapshot("Chunking progress");
+            using var timer = new PeriodicTimer(_reportInterval);
+
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                LogSnapshot("Chunking progress");
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogDebug("Chunking progress reporting loop was canceled.");
         }
     }
 
@@ -161,7 +162,7 @@ public sealed class ChunkingProgressReporter : IChunkingProgressReporter
                 chunksCompleted,
                 activeSorters,
                 FormatBytes((long)throughputBytesPerSecond),
-                elapsed);
+                FormatElapsed(elapsed));
             return;
         }
 
@@ -173,7 +174,7 @@ public sealed class ChunkingProgressReporter : IChunkingProgressReporter
             chunksCompleted,
             activeSorters,
             FormatBytes((long)throughputBytesPerSecond),
-            elapsed);
+            FormatElapsed(elapsed));
     }
 
     private static string FormatBytes(long bytes)
@@ -189,5 +190,10 @@ public sealed class ChunkingProgressReporter : IChunkingProgressReporter
         }
 
         return $"{value:F1} {units[unitIndex]}";
+    }
+
+    private static string FormatElapsed(TimeSpan elapsed)
+    {
+        return elapsed.ToString(@"hh\:mm\:ss");
     }
 }

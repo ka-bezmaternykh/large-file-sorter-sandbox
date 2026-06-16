@@ -10,6 +10,7 @@ public sealed class SorterApplication : ISorterApplication
     private readonly IChunkSorterFactory _chunkSorterFactory;
     private readonly IChunkingProgressReporter _chunkingProgressReporter;
     private readonly IInputFileAdapter _inputFileAdapter;
+    private readonly IMergeProgressReporter _mergeProgressReporter;
     private readonly IMergeSortingCoordinator _mergeSortingCoordinator;
     private readonly IInputFileReader _inputFileReader;
     private readonly ILogger<SorterApplication> _logger;
@@ -19,6 +20,7 @@ public sealed class SorterApplication : ISorterApplication
         IChunkSorterFactory chunkSorterFactory,
         IChunkingProgressReporter chunkingProgressReporter,
         IInputFileAdapter inputFileAdapter,
+        IMergeProgressReporter mergeProgressReporter,
         IMergeSortingCoordinator mergeSortingCoordinator,
         IInputFileReader inputFileReader,
         ILogger<SorterApplication> logger)
@@ -27,6 +29,7 @@ public sealed class SorterApplication : ISorterApplication
         ArgumentNullException.ThrowIfNull(chunkSorterFactory);
         ArgumentNullException.ThrowIfNull(chunkingProgressReporter);
         ArgumentNullException.ThrowIfNull(inputFileAdapter);
+        ArgumentNullException.ThrowIfNull(mergeProgressReporter);
         ArgumentNullException.ThrowIfNull(mergeSortingCoordinator);
         ArgumentNullException.ThrowIfNull(inputFileReader);
         ArgumentNullException.ThrowIfNull(logger);
@@ -35,6 +38,7 @@ public sealed class SorterApplication : ISorterApplication
         _chunkSorterFactory = chunkSorterFactory;
         _chunkingProgressReporter = chunkingProgressReporter;
         _inputFileAdapter = inputFileAdapter;
+        _mergeProgressReporter = mergeProgressReporter;
         _mergeSortingCoordinator = mergeSortingCoordinator;
         _inputFileReader = inputFileReader;
         _logger = logger;
@@ -92,6 +96,7 @@ public sealed class SorterApplication : ISorterApplication
         finally
         {
             await _chunkingProgressReporter.CompleteAsync();
+            await _mergeProgressReporter.CompleteAsync();
 
             var process = Process.GetCurrentProcess();
             _logger.LogInformation("Small set of memory metrics in the end");
