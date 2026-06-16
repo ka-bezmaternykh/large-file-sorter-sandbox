@@ -1,6 +1,12 @@
-# ca-surveillance-test-task
+# Large File Sorting - External merge sort
 
-## Test Assignment
+
+## Disclaimer
+
+This repository is an experiment in using Codex to solve the classic [external sorting](https://en.wikipedia.org/wiki/External_sorting) problem. To avoid inventing a synthetic problem statement from scratch, it uses a public test assignment found online as the starting point for the exercise.  
+During the work on this assignment, one senior engineer, several Codex agents, and a fair amount of Russian profanity were observed. No agents were harmed in the process.
+
+## Assignment
 
 Process a large text file where each line follows the format:
 
