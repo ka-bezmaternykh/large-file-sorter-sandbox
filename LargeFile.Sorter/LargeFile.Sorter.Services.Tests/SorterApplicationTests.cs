@@ -120,6 +120,11 @@ public class SorterApplicationTests
         {
             ReportInterval = TimeSpan.FromSeconds(5)
         });
+        services.AddSingleton(new MergeProgressConfig
+        {
+            ReportInterval = TimeSpan.FromSeconds(5),
+            BatchReportInterval = TimeSpan.FromSeconds(5)
+        });
         services.AddLargeFileSorterServices();
 
         return services.BuildServiceProvider();

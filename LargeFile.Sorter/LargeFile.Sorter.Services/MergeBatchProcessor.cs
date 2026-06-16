@@ -14,6 +14,7 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
     private readonly IServiceProvider _serviceProvider;
     private readonly IComparer<Item> _itemComparer;
     private readonly IItemFormatter _itemFormatter;
+    private readonly IMergeBatchProgressReporterFactory _mergeBatchProgressReporterFactory;
     private readonly ILogger<MergeBatchProcessor> _logger;
     private int _nextMergeNumber;
 
@@ -22,23 +23,28 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
         IServiceProvider serviceProvider,
         IComparer<Item> itemComparer,
         IItemFormatter itemFormatter,
+        IMergeBatchProgressReporterFactory mergeBatchProgressReporterFactory,
         ILogger<MergeBatchProcessor> logger)
     {
         ArgumentNullException.ThrowIfNull(mergeConfig);
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(itemComparer);
         ArgumentNullException.ThrowIfNull(itemFormatter);
+        ArgumentNullException.ThrowIfNull(mergeBatchProgressReporterFactory);
         ArgumentNullException.ThrowIfNull(logger);
 
         _mergeConfig = mergeConfig;
         _serviceProvider = serviceProvider;
         _itemComparer = itemComparer;
         _itemFormatter = itemFormatter;
+        _mergeBatchProgressReporterFactory = mergeBatchProgressReporterFactory;
         _logger = logger;
     }
 
     public async Task<ITempFileAdapter> MergeBatchAsync(
         IReadOnlyList<ITempFileAdapter> batchFiles,
+        int passNumber,
+        int batchNumber,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(batchFiles);
@@ -54,6 +60,7 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
         }
 
         _logger.LogInformation("Merging batch of {BatchFileCount} temp files.", batchFiles.Count);
+        var totalInputBytes = batchFiles.Sum(batchFile => batchFile.GetFileSizeBytes());
         var mergeFilePath = CreateMergeFilePath();
         var mergeFileAdapter = ActivatorUtilities.CreateInstance<MergeFileAdapter>(
             _serviceProvider,
@@ -61,8 +68,10 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
             {
                 FilePath = mergeFilePath
             });
+        var mergeBatchProgressReporter = _mergeBatchProgressReporterFactory.Create(passNumber, batchNumber, batchFiles.Count, totalInputBytes);
 
         var readers = new Dictionary<int, ITempFileReader>(batchFiles.Count);
+        var completedSuccessfully = false;
 
         try
         {
@@ -89,7 +98,7 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
                 while (priorityQueue.TryDequeue(out var mergeEntry, out _))
                 {
                     EnsureFormatBufferCapacity(ref formatBuffer, mergeEntry.Item.TextBytes.Length + 32);
-                    await WriteItemAsync(mergeEntry.Item, mergeFileWriter, formatBuffer, cancellationToken);
+                    await WriteItemAsync(mergeEntry.Item, mergeFileWriter, formatBuffer, mergeBatchProgressReporter, cancellationToken);
 
                     var nextItem = await readers[mergeEntry.SourceChunkNumber].ReadNextAsync(cancellationToken);
                     if (nextItem.HasValue)
@@ -104,6 +113,8 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
             {
                 ArrayPool<byte>.Shared.Return(formatBuffer);
             }
+
+            completedSuccessfully = true;
         }
         finally
         {
@@ -111,6 +122,8 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
             {
                 await reader.DisposeAsync();
             }
+
+            await mergeBatchProgressReporter.CompleteAsync(completedSuccessfully);
         }
 
         await DisposeTempFileAdaptersAsync(batchFiles);
@@ -121,6 +134,7 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
         Item item,
         ITempFileWriter mergeFileWriter,
         byte[] formatBuffer,
+        IMergeBatchProgressReporter mergeBatchProgressReporter,
         CancellationToken cancellationToken)
     {
         if (!_itemFormatter.TryFormat(item, formatBuffer, out var written))
@@ -130,6 +144,7 @@ public sealed class MergeBatchProcessor : IMergeBatchProcessor
         }
 
         await mergeFileWriter.WriteAsync(formatBuffer.AsMemory(0, written), cancellationToken);
+        mergeBatchProgressReporter.ReportBytesWritten(written);
     }
 
     private static void EnsureFormatBufferCapacity(ref byte[] buffer, int requiredLength)

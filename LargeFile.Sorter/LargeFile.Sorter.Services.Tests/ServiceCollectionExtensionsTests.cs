@@ -38,6 +38,11 @@ public class ServiceCollectionExtensionsTests
         {
             ReportInterval = TimeSpan.FromSeconds(5)
         });
+        services.AddSingleton(new MergeProgressConfig
+        {
+            ReportInterval = TimeSpan.FromSeconds(5),
+            BatchReportInterval = TimeSpan.FromSeconds(5)
+        });
         services.AddLargeFileSorterServices();
 
         await using var serviceProvider = services.BuildServiceProvider();
@@ -45,20 +50,27 @@ public class ServiceCollectionExtensionsTests
         var application = serviceProvider.GetRequiredService<ISorterApplication>();
         var adapter = serviceProvider.GetRequiredService<IInputFileAdapter>();
         var chunkingProgressReporter = serviceProvider.GetRequiredService<IChunkingProgressReporter>();
+        var mergeProgressReporter = serviceProvider.GetRequiredService<IMergeProgressReporter>();
         var chunkingProgressConfig = serviceProvider.GetRequiredService<ChunkingProgressConfig>();
+        var mergeProgressConfig = serviceProvider.GetRequiredService<MergeProgressConfig>();
         var environmentMonitor = serviceProvider.GetRequiredService<IEnvironmentMonitor>();
         var chunkSorterFactory = serviceProvider.GetRequiredService<IChunkSorterFactory>();
         var mergeSortingCoordinator = serviceProvider.GetRequiredService<IMergeSortingCoordinator>();
         var mergeExecutionLimiter = serviceProvider.GetRequiredService<IMergeExecutionLimiter>();
+        var mergeBatchProgressReporterFactory = serviceProvider.GetRequiredService<IMergeBatchProgressReporterFactory>();
         var itemFormatter = serviceProvider.GetRequiredService<IItemFormatter>();
 
         Assert.Equal(tempInputFilePath, adapter.FilePath);
         Assert.NotNull(chunkingProgressReporter);
+        Assert.NotNull(mergeProgressReporter);
         Assert.Equal(TimeSpan.FromSeconds(5), chunkingProgressConfig.ReportInterval);
+        Assert.Equal(TimeSpan.FromSeconds(5), mergeProgressConfig.ReportInterval);
+        Assert.Equal(TimeSpan.FromSeconds(5), mergeProgressConfig.BatchReportInterval);
         Assert.True(environmentMonitor.LevelOfParallelism > 0);
         Assert.Empty(chunkSorterFactory.ChunkFileAdapters);
         Assert.NotNull(mergeSortingCoordinator);
         Assert.True(mergeExecutionLimiter.MaxConcurrentBatches > 0);
+        Assert.NotNull(mergeBatchProgressReporterFactory);
         Assert.IsType<TextRowFormatter>(itemFormatter);
 
         await application.RunAsync();

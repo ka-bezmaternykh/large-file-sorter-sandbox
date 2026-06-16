@@ -29,6 +29,11 @@ public class ChunkSorterFactoryTests
         {
             ReportInterval = TimeSpan.FromSeconds(5)
         });
+        services.AddSingleton(new MergeProgressConfig
+        {
+            ReportInterval = TimeSpan.FromSeconds(5),
+            BatchReportInterval = TimeSpan.FromSeconds(5)
+        });
         services.AddSingleton(new MergeConfig
         {
             MaxChunkFilesPerMerge = 64,
