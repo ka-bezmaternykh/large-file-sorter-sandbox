@@ -41,7 +41,7 @@ public static class AppHost
         builder.Services.AddSingleton(new MergeConfig
         {
             MaxChunkFilesPerMerge = 64,
-            MaxConcurrentMergeBatches = 4,
+            MaxConcurrentMergeBatches = 8,
             TempFilesFolder = options.TempFilesDir ?? DefaultTempFilesFolder,
             MergeFileTemplate = "merge-{0:D4}.tmp"
         });
