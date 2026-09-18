@@ -57,6 +57,9 @@ TestResult.xml
 nunit-*.xml
 
 LargeFiles/*
+PerformanceTesting/logs/*
+PerformanceTesting/*-metrics.*
+!PerformanceTesting/logs/.gitkeep
 */.idea/*
 */Release/*
 *.sln.dotsettings.user
